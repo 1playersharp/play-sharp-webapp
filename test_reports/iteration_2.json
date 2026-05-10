@@ -1,0 +1,34 @@
+{
+  "summary": "V1.1 regression test PASSED. Backend: 22/22 pytest tests pass including new rules (arbitrary club accepted with 201, empty/whitespace club rejected 400, age 6-99 validated with 422 outside, age optional, /api/clubs dynamic from db.scores.distinct). Frontend: all three game setup screens (Demo, Reaction, Decision) now expose free-text name/age/club inputs with correct data-testids; no hardcoded club buttons remain; start-button disabled unless name+club filled. Leaderboard club Select is populated dynamically from /api/clubs (verified 12 options incl. seeded 3 + user-submitted TEST_* clubs). Hero shows THINK QUICKER (red highlight) + Move smarter (italic red) on stadium photo. PricingCards '& academies' renders correctly (no literal amp; HTML escape). Contact form submits end-to-end and displays success toast/confirmation.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_playsharp_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py: POST /api/score strips club but does NOT normalize case/whitespace when inserting — 'south london fc' and 'South London FC' would be two distinct clubs in /api/clubs. Consider case-normalization or a canonical club collection if this matters for UX.",
+    "server.py: no rate limiting / captcha on /api/score and /api/contact — arbitrary clubs + open POST enables leaderboard pollution in production. MVP-acceptable but note it for launch.",
+    "server.py: weekly period filter compares createdAt as ISO strings; works only because all docs are ISO strings. Storing as native BSON datetime would be more correct (flagged in iter_1 too).",
+    "Pydantic v2 deprecation: @app.on_event('startup'/'shutdown') deprecated; migrate to lifespan context manager.",
+    "Frontend Demo/Reaction/Decision pages duplicate the submitScore(name,club,age) helper — consider extracting a usePlayerScore() hook to DRY.",
+    "Leaderboard.jsx: if a club name contains characters like '.' or '/', the generated data-testid `club-option-${name.replace(/\\s/g,'-')}` will not escape them; fine for now but could collide with CSS selectors."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_playsharp_api.py"
+  ],
+  "success_rate": {"backend": "100% (22/22)", "frontend": "100%"},
+  "test_credentials": "N/A — app has no auth.",
+  "seed_data_creation": "Backend still self-seeds 40 scores on fresh DB. Test run added several TEST_-prefixed clubs (TEST_Some Random Club FC, TEST_St. Mary's Academy, TEST_AgeClub, TEST_NoAgeClub, TEST_FilterClub_XYZ, TEST_UniqueClub_Playsharp_V11, TEST_UI_ClubV11) — all show up correctly in /api/clubs confirming dynamic behaviour.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "V1.1 delta is green. Regression suite /app/backend/tests/test_playsharp_api.py (22 tests) covers: root, dynamic /api/clubs incl. sorted + seeded subset, contact CRUD, score with arbitrary/apostrophe/empty/whitespace clubs, age validation (valid/missing/too-low/too-high), age persisted into leaderboard, new club auto-appears in /api/clubs, leaderboard sort/filter/weekly/unknown-game-type. Frontend data-testids confirmed: demo-input-{name|age|club}, demo-start-button, demo-skip-{reaction|decision}, reaction-input-{name|age|club}, reaction-start-button, decision-input-{name|age|club}, decision-start-button, leaderboard-club-filter (dynamic), leaderboard-tab-{reaction|decision}, contact-input-{name|email|club|message}, contact-submit-button, hero-section, pricing-cards, pricing-cta-{basic|advanced}. Hero uppercase via CSS — any text assertions should be case-insensitive."
+}

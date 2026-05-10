@@ -1,0 +1,46 @@
+{
+  "summary": "V1.3 testing — canonical_club normalisation, isNewClub flag, POST/GET /club-claim, leaderboard canonical filter, frontend Pricing (5 tiers), DecisionGame (6 animated scenarios), ClubClaimModal all PASS. Rate limiting is BROKEN in the preview environment: slowapi's default get_remote_address uses request.client.host which returns the Kubernetes ingress pod IP — and requests alternate between TWO ingress pods (10.79.131.92 & .93), so each caller is effectively two independent keys. 22 rapid /score requests and 7 rapid /club-claim requests all returned 201 with no 429. This means rate limiting provides no real protection against leaderboard spam in production.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "/api/score & /api/club-claim", "issue": "Rate limiting does NOT fire — slowapi key_func=get_remote_address resolves to rotating k8s ingress pod IPs (10.79.131.92 / .93). Tested 22 rapid POSTs to /score and 7 to /club-claim, all returned 201. FIX: implement a custom key_func that reads X-Forwarded-For header, e.g. `lambda req: (req.headers.get('x-forwarded-for') or req.client.host).split(',')[0].strip()` — and add SlowAPIMiddleware for consistent request-state propagation.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/score + POST /api/club-claim", "issue": "canonical_club() title-cases arbitrary all-caps tokens (e.g. 'TEST' → 'Test', 'UI' → 'Ui'). Users submitting legitimate all-caps acronyms (AFC, SSFC, PSG) only survive if the token is in _KEEP_UPPER. Acceptable for MVP but worth expanding _KEEP_UPPER or preserving any token that's already fully uppercase & >=2 chars."},
+      {"endpoint": "all limited routes", "issue": "slowapi uses in-memory MemoryStorage by default — counters reset on backend reload. Use Redis-backed storage for production."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_playsharp_v13.py",
+    "/app/test_reports/pytest/v13_results.xml"
+  ],
+  "action_items": [
+    "Fix slowapi key_func to honour X-Forwarded-For header so rate limits apply per real client IP, not per ingress pod. Also add SlowAPIMiddleware(app).",
+    "(Optional) Expand _KEEP_UPPER or preserve tokens that are already fully uppercase with length >= 2."
+  ],
+  "critical_code_review_comments": [
+    "server.py: slowapi limiter is declared but will NOT block spam in k8s because the decorator uses request.client.host — this hits the ingress IP which alternates. Root cause of rate-limit-not-triggering bug. Trust X-Forwarded-For.",
+    "server.py: SlowAPIMiddleware is not added — decorator-only usage works for basic cases but middleware ensures request.state.view_rate_limit is populated before the view runs and keeps error-handler context consistent.",
+    "server.py: @app.on_event('startup'/'shutdown') still deprecated — migrate to lifespan context manager.",
+    "server.py: club_claims are logged including email + name at INFO level — fine for internal, but consider redacting if logs go to third-party aggregator.",
+    "ClubClaimModal.jsx: uses uncontrolled click-outside-to-close (backdrop onClick={onClose}) even mid-submit. A slip while typing could dismiss half-completed lead data. Consider guarding with `if (submitting) return;`.",
+    "Demo.jsx: claim modal trigger relies only on frontend state `isNewClub` from the first score POST. If a user plays multiple rounds for the SAME new club, isNewClub stays true and the modal opens at the end — fine UX, but note it is driven solely by the first submission's flag and won't re-evaluate server-side at leaderboard time.",
+    "DecisionGame.jsx: phase gating disables A/B/C buttons outside `deciding`, but the on-click still fires handlePick which early-returns — safe. Animation duration hard-coded to max(anim durations) + 350ms; if Phaser fails to load on slow connections the question overlay never shows. Consider a fallback timeout to force 'deciding' after 4s."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_playsharp_v13.py"
+  ],
+  "success_rate": {
+    "backend": "13/13 functional tests (100%); 0/2 rate-limit tests (0%) — slowapi misconfigured for k8s ingress",
+    "frontend": "100% — all V1.3 flows (5-tier pricing, 6-scenario decision game with A/B/C + Phaser canvas, ClubClaimModal open-on-new-club / suppressed-on-seeded-club, success state) pass end-to-end"
+  },
+  "seed_data_creation": "All TEST_/RL_ scores, contacts, club_claims cleaned up post-run. Mongo restored to exactly 40 seed scores, 0 contacts, 0 club_claims. Leaderboard preview is clean.",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "V1.3 spec: /api/score returns isNewClub bool + canonical club; /api/club-claim POST (5/min) + GET (no _id); canonical_club preserves FC/AFC/U12/U-12/U18 etc. Frontend testids: pricing-card-{free|individual|team|school|academy}, pricing-cta-{tier}, decision-game-canvas, decision-progress, decision-question, decision-feedback, decision-option-{A|B|C}, decision-correct, club-claim-modal, club-claim-input-{name|email|role|squad}, club-claim-submit, club-claim-success. Frontend waits 900ms after reaching leaderboard step before opening modal for new clubs. Skip rate-limit tests until main agent fixes the key_func — testing them pollutes the DB without producing useful 429s. Backend regression suite (test_playsharp_api.py, 22 tests) from iter_2 still passes; V1.3 additions live in test_playsharp_v13.py.",
+  "rca of the issue": "Rate limiting: slowapi Limiter(key_func=get_remote_address). get_remote_address() returns request.client.host which in a Kubernetes setup is the ingress sidecar's IP, not the real client. Backend stdout shows requests alternating between 10.79.131.92 and 10.79.131.93 (two ingress pods), so for any single client the rate-limit counter is split across two keys — effectively doubling the real budget AND letting large bursts through undetected. Reproduction: `for i in {1..25}; do curl -X POST $URL/api/score -d '{...}'; done` → observe all 201s. Mitigation: custom key_func reading X-Forwarded-For (first entry), plus `app.add_middleware(SlowAPIMiddleware)` for consistent state."
+}

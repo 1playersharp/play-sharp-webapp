@@ -1,0 +1,49 @@
+# Lambda runtime dependencies only (no dev tools)
+# Minimal set to avoid version conflicts
+
+# Core async/web framework
+fastapi==0.110.1
+starlette==0.37.2
+uvicorn==0.27.0
+pydantic==2.13.3
+mangum==0.17.0
+
+# AWS 
+boto3==1.42.86
+botocore==1.42.86
+
+# HTTP/networking
+aiohttp==3.13.5
+httpx==0.28.1
+requests==2.33.1
+
+# Data/serialization
+jsonschema==4.26.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+
+# Crypto/security
+cryptography>=41.0.5,<45
+cffi>=1.15.0
+pycparser>=2.21
+
+# Auth/validation
+email-validator==2.3.0
+passlib==1.7.4
+
+# Utilities
+certifi>=2023.7.22
+charset-normalizer>=2.1.0
+idna>=2.5
+click==8.3.2
+typing-extensions>=4.8.0
+annotated-types==0.7.0
+
+# Async support
+aiosignal==1.4.0
+frozenlist==1.8.0
+multidict>=5.2.0
+
+# Optional
+python-dotenv==1.2.2
+

@@ -1,0 +1,56 @@
+{
+  "summary": "First-pass full e2e test of PlaySharp MVP. Backend (15/15 pytest) and frontend (all flows) PASS. Backend endpoints, validation, sorting, filters, seed-data, and ObjectId exclusion verified. Frontend home/pricing/contact/demo/leaderboard/games all render and integrate with backend. Phaser games initialize canvases on both /demo and direct /games routes. No critical issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_playsharp_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py weekly period filter compares createdAt as ISO strings (string > string). Works because all docs are stored as ISO strings, but consider storing as native BSON datetime so $gte uses proper datetime semantics and indexing is more reliable.",
+    "Pydantic v2 deprecation: @app.on_event('startup') / 'shutdown' are deprecated in newer FastAPI; consider lifespan context manager. Non-blocking but emits warnings.",
+    "Score model accepts score up to 10000 but business rules cap reaction at 1000 and decision at 100 — server does not enforce upper-bound per gameType. Low priority.",
+    "No rate limiting on /api/contact and /api/score — vulnerable to spam in production. MVP-acceptable.",
+    "/api/contact GET (list) is publicly accessible with no auth — fine for MVP demo, but should be locked down before launch.",
+    "Frontend routes /games/reaction and /games/decision render a setup form first (name + club) before showing the canvas. Review request implied canvas should be present immediately; current behaviour is actually better UX, but worth confirming with PM."
+  ],
+  "updated_files": [
+    "/app/backend/tests/__init__.py",
+    "/app/backend/tests/test_playsharp_api.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "N/A — app has no auth.",
+  "seed_data_creation": "Backend self-seeds 40 sample scores (20 reaction + 20 decision) on startup. Tests added a few TEST_-prefixed contacts and scores for verification (no cleanup, harmless for demo).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All functional acceptance criteria from the review request are met. /app/backend/tests/test_playsharp_api.py is the regression suite (15 tests, run with: pytest /app/backend/tests/ -v --junitxml=/app/test_reports/pytest/pytest_results.xml). For UI: data-testids are excellent — use leaderboard-tab-{reaction|decision}, leaderboard-club-filter, leaderboard-period-filter, contact-input-{name|email|club|message}, contact-submit-button, demo-input-name, demo-club-{Club-With-Hyphens}, demo-start-button, demo-skip-{reaction|decision}, reaction-game-canvas, decision-game-canvas, decision-action-{pass|shoot|dribble}, navbar-mobile-toggle, nav-mobile-{home|demo|leaderboard|pricing|contact}. Direct game routes /games/reaction and /games/decision require player setup before canvas appears.",
+  "verified_flows": [
+    "GET /api/ → 200 + app/motto/version",
+    "GET /api/clubs → 3 clubs",
+    "POST /api/contact valid → 201, persisted (verified via GET /api/contact)",
+    "POST /api/contact invalid email → 422",
+    "POST /api/score reaction/decision → 201",
+    "POST /api/score unknown club → 400; unknown gameType → 422",
+    "GET /api/leaderboard/reaction → ascending by reactionTime, club & weekly filters work",
+    "GET /api/leaderboard/decision → descending by score",
+    "GET /api/leaderboard/<bad> → 400",
+    "Seeded ≥30 scores present (40 expected)",
+    "All Mongo responses exclude _id",
+    "Home page hero THINK QUICKER + 3 CTAs + audience cards + demo preview + leaderboard preview render",
+    "Pricing page: £19 Basic, Advanced 'Contact for price', AI Coaching coming-soon, comparison content",
+    "Contact form: validates client-side, POSTs (201), shows Sonner toast 'Message received', clears form",
+    "Demo flow: setup → reaction → decision → leaderboard, Skip works at every step",
+    "Reaction Phaser canvas (data-testid='reaction-game-canvas') renders at 1230x460 with HUD ROUND/LAST/false-starts",
+    "Decision Phaser canvas renders, PASS/SHOOT/DRIBBLE buttons work, feedback overlay (CORRECT/INCORRECT) shows after pick",
+    "Leaderboard page: Reaction/Decision tabs switch (separate API calls), club Select + period Select wired",
+    "Navbar links work; mobile menu toggle reveals nav-mobile-* links"
+  ]
+}

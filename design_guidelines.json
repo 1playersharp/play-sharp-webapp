@@ -1,0 +1,128 @@
+{
+  "theme": "dark",
+  "archetype": "2 (The Performance Pro)",
+  "design_philosophy": "Tactical Minimalism. PlaySharp is a high-end B2B sports tech SaaS, not a generic arcade game. The aesthetic must feel like elite athlete training tech (e.g., GPS performance vests, professional coaching dashboards). We rely on sharp 1px borders, intense typography, and stark contrasts over soft shadows.",
+  "colors": {
+    "background": {
+      "base": "#0A0A0A",
+      "surface": "#121418",
+      "surface_elevated": "#1A1D24"
+    },
+    "brand": {
+      "primary": "#0055FF",
+      "primary_hover": "#3377FF",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#23883C",
+      "secondary_foreground": "#FFFFFF"
+    },
+    "accents": {
+      "warning_defender": "#E63946",
+      "ball_pure": "#FFFFFF",
+      "turf_green": "#23883C",
+      "turf_green_glow": "rgba(35, 136, 60, 0.4)"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#9CA3AF",
+      "muted": "#6B7280"
+    },
+    "border": {
+      "default": "rgba(255, 255, 255, 0.1)",
+      "focus": "#0055FF"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "'Barlow Condensed', sans-serif",
+      "body": "'IBM Plex Sans', sans-serif",
+      "mono": "'JetBrains Mono', monospace"
+    },
+    "rules": {
+      "h1": "text-5xl md:text-6xl font-black uppercase tracking-tight",
+      "h2": "text-3xl md:text-4xl font-bold uppercase tracking-tight",
+      "h3": "text-xl md:text-2xl font-bold uppercase tracking-wide",
+      "body": "text-base leading-relaxed tracking-normal font-medium",
+      "labels": "text-xs font-bold uppercase tracking-[0.2em] text-gray-400",
+      "metrics": "font-mono text-3xl md:text-5xl font-bold text-white tracking-tight"
+    },
+    "anti_patterns": [
+      "Do NOT use Inter, Space Grotesk, Roboto, or standard web sans for headings.",
+      "Do NOT use lowercase or title case for major section headers (use uppercase for athletic feel)."
+    ]
+  },
+  "layout_and_spacing": {
+    "philosophy": "Control Room Density for apps, Tetris Grid for landing pages.",
+    "spacing_scale": "Use generous p-8, p-12 for marketing sections. Use tighter p-4, p-6 for dashboard and game UI.",
+    "borders_and_radii": "Minimal roundness. Use rounded-none or rounded-md (max 6px). UI must feel sharp and architectural.",
+    "surfaces": "Avoid soft drop shadows. Use 1px solid borders (border-white/10) and subtle inner glow (shadow-inner) for depth."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#0055FF] text-white rounded-none border border-[#0055FF] hover:bg-[#3377FF] transition-all px-8 py-4 font-bold uppercase tracking-wider",
+      "secondary": "bg-transparent text-white border border-white/20 rounded-none hover:border-white hover:bg-white/5 transition-all px-8 py-4 font-bold uppercase tracking-wider",
+      "badge": "bg-[#23883C]/10 text-[#23883C] border border-[#23883C]/30 px-3 py-1 rounded-sm text-xs font-bold uppercase tracking-wider"
+    },
+    "cards": {
+      "default": "bg-[#121418] border border-white/10 rounded-sm p-8 hover:border-white/30 transition-colors",
+      "premium": "bg-[#0A0A0A] border border-[#0055FF]/50 rounded-sm p-8 shadow-[0_0_30px_rgba(0,85,255,0.1)] relative overflow-hidden"
+    },
+    "forms": {
+      "input": "bg-[#0A0A0A] border-b border-white/20 border-t-0 border-l-0 border-r-0 rounded-none px-0 py-3 text-white focus:ring-0 focus:border-[#0055FF] transition-colors"
+    }
+  },
+  "motion": {
+    "page_transitions": "Instant or subtle 0.2s fade. No slow sweeps.",
+    "hover_states": "Immediate border color shifts, slight negative Y translations (-translate-y-1) for audience cards.",
+    "premium_effect": "Use 'Tracing Beam' or slow gradient pan on the 'Advanced' pricing tier card border to signify high-tech AI capability."
+  },
+  "specific_page_guidelines": {
+    "landing_page": {
+      "hero": "Dark background with 'hero_pitch_texture' image overlay at 30% opacity. Left aligned heavy text. High contrast.",
+      "audience_section": "4-column or bento grid. Use images with heavy bottom-to-top dark gradients to make text readable.",
+      "demo_preview": "Split layout. Left: Game thumbnail/video representation using 'tactical_board_bg'. Right: Feature list with metrics font.",
+      "pricing": "Side-by-side cards. Basic (standard border) vs Advanced (electric blue border). The 'AI Coaching - Coming Soon' badge uses the turf green accent."
+    },
+    "game_ui": {
+      "phaser_container": "Bordered container (border-white/20). Absolute position HTML overlays for HUD (score, timer).",
+      "reaction_game": "HUD must use JetBrains Mono. Score counts in ms. Immediate visual feedback (red screen flash for false start, green for success).",
+      "decision_game": "Top-down view. Pitch is dark slate/green, player is blue, defender is red, teammate is white. The 'freeze frame' must feel like tactical TV analysis.",
+      "leaderboard": "Tabular layout. Sleek, high density. Ranks 1-3 highlighted in white, rest in gray. Club filters use Shadcn Select but customized to look flat and dark."
+    }
+  },
+  "image_urls": {
+    "hero_background": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/11e47a01-0d53-49e0-ad4f-66f4f563ae1a/images/b5cce675b74563cbf47387876ca99736f077927f8020fd618691164647e38b8a.png",
+      "description": "Abstract dark pitch texture, use in the hero section behind text."
+    },
+    "tactical_board": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/11e47a01-0d53-49e0-ad4f-66f4f563ae1a/images/8dae8c7efd790c7b6eda837b33805f29c47ce457d964808a20c2b696f966769b.png",
+      "description": "Top-down tactical blueprint. Use as background for the Demo/Product explanation section."
+    },
+    "advanced_tech": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/11e47a01-0d53-49e0-ad4f-66f4f563ae1a/images/2e39fb8f55d8320cb2d7a2309273d3077ef88460acbf3ab528c0792f8b2a57b2.png",
+      "description": "3D render of a GPS tracking vest. Use as an accent image in the 'Advanced Analytics / AI Coaching' feature block."
+    },
+    "audience_coach": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/11e47a01-0d53-49e0-ad4f-66f4f563ae1a/images/e6d86e4a22b1a91c8cd70b5615f8ceb25a738a8f790aedd2e2f337fedafafde0.png",
+      "description": "Coach holding a tablet. Use in the Audience Cards for 'Coaches'."
+    },
+    "audience_academy": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/11e47a01-0d53-49e0-ad4f-66f4f563ae1a/images/d4805fcb51f0c896d8820ef6faac9f77cde7ca499b493b416067033267686410.png",
+      "description": "Youth academy players under floodlights. Use in the Audience Cards for 'Schools' or 'Clubs'."
+    },
+    "audience_player": {
+      "url": "https://images.unsplash.com/photo-1772707681004-ebbce15554d4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzF8MHwxfHNlYXJjaHwyfHxmb290YmFsbCUyMHRyYWluaW5nJTIwc3RhZGl1bSUyMG5pZ2h0fGVufDB8fHx8MTc3NzgxMzk3MHww&ixlib=rb-4.1.0&q=85",
+      "description": "Football player training at night. Use in the Audience Cards for 'Players'."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Load Google Fonts: 'Barlow Condensed', 'IBM Plex Sans', and 'JetBrains Mono' in index.html.",
+    "Implement the landing page strictly matching the dark, high-contrast, elite-sports vibe.",
+    "In React components, override standard Tailwind utilities to match the flat, architectural borders defined in these guidelines.",
+    "Use framer-motion for the required hover effects and the 'tracing beam' on the premium card.",
+    "For the games, use phaser.js. The canvas should seamlessly blend into the dark UI. Use HTML/React overlays for menus and leaderboards.",
+    "CRITICAL: All interactive and key informational elements MUST include a 'data-testid' attribute (e.g., data-testid='start-demo-button').",
+    "CRITICAL: Do NOT use placeholder image URLs. Use ONLY the URLs provided in the image_urls block.",
+    "Use pure HTML + Tailwind for the marketing layouts, but use heavily customized Shadcn components for forms, select dropdowns (for club filter), and tabs."
+  ]
+}
