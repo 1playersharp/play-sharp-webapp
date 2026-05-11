@@ -34,8 +34,8 @@ async def get_leaderboard(
     params = {
         "IndexName": "GameTypeScoreIndex",
         "KeyConditionExpression": Key("game_type").eq(game_type),
-        "ProjectionExpression": "#id, name, club, age, gameType, score, reactionTime, createdAt",
-        "ExpressionAttributeNames": {"#id": "id"},
+        "ProjectionExpression": "#id, #n, club, age, gameType, score, reactionTime, createdAt",
+        "ExpressionAttributeNames": {"#id": "id", "#n": "name"},
         "ScanIndexForward": True,
         "Limit": limit,
     }
