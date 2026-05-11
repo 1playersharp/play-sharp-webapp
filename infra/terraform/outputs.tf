@@ -1,18 +1,18 @@
-output "frontend_url" {
-  value = aws_s3_bucket_website_configuration.frontend.website_endpoint
-}
+#output "frontend_url" {
+#  value = aws_s3_bucket_website_configuration.frontend.website_endpoint
+#}
 
 output "backend_url" {
   value = aws_apigatewayv2_api.api.api_endpoint
 }
 
-output "cloudfront_url" {
-  value = aws_cloudfront_distribution.frontend.domain_name
-}
+#output "cloudfront_url" {
+#  value = aws_cloudfront_distribution.frontend.domain_name
+#}
 
-output "cloudfront_id" {
-  value = aws_cloudfront_distribution.frontend.id
-}
+#output "cloudfront_id" {
+#  value = aws_cloudfront_distribution.frontend.id
+#}
 
 output "api_gateway_url" {
   value = aws_apigatewayv2_stage.default.invoke_url

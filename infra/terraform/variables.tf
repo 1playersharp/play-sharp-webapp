@@ -4,6 +4,12 @@ variable "environment" {
   default = "dev"
 }
 
+variable "aws_region" {
+  type = string
+  description = "The AWS region to deploy to"
+  default = "eu-west-2"
+}
+
 variable "prefix" {
   type = string
   description = "The prefix name of the application"

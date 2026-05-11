@@ -7,6 +7,7 @@ starlette==0.37.2
 uvicorn==0.27.0
 pydantic==2.13.3
 mangum==0.17.0
+slowapi==0.1.9
 
 # AWS 
 boto3==1.42.86

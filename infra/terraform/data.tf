@@ -54,27 +54,27 @@ data "aws_iam_policy_document" "leaderboard_policy_document" {
   }
 }
 
-data "aws_iam_policy_document" "frontend_policy" {
-  statement {
-    actions   = [
-      "s3:GetObject"
-    ]
-    resources = [
-      aws_s3_bucket.frontend.arn,
-      "${aws_s3_bucket.frontend.arn}/*"
-    ]
-
-    principals {
-      type        = "Service"
-      identifiers = ["cloudfront.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "AWS:SourceArn"
-      values   = [
-        aws_cloudfront_distribution.frontend.arn
-      ]
-    }
-  }
-}
+#data "aws_iam_policy_document" "frontend_policy" {
+#  statement {
+#    actions   = [
+#      "s3:GetObject"
+#    ]
+#    resources = [
+#      aws_s3_bucket.frontend.arn,
+#      "${aws_s3_bucket.frontend.arn}/*"
+#    ]
+#
+#    principals {
+#      type        = "Service"
+#      identifiers = ["cloudfront.amazonaws.com"]
+#    }
+#
+#    condition {
+#      test     = "StringEquals"
+#      variable = "AWS:SourceArn"
+#      values   = [
+#        aws_cloudfront_distribution.frontend.arn
+#      ]
+#    }
+#  }
+#}
