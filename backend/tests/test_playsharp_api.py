@@ -3,13 +3,13 @@ import os
 import pytest
 import requests
 
-BASE_URL = os.environ.get("VITE_BACKEND_URL", "") or os.environ.get("REACT_APP_BACKEND_URL", "")
+BASE_URL = os.environ.get("VITE_BACKEND_URL", "") 
 BASE_URL = BASE_URL.rstrip("/")
 if not BASE_URL:
     from pathlib import Path
     env = Path("../../frontend/.env").read_text()
     for line in env.splitlines():
-        if line.startswith("VITE_BACKEND_URL=") or line.startswith("REACT_APP_BACKEND_URL="):
+        if line.startswith("VITE_BACKEND_URL=") 
             BASE_URL = line.split("=", 1)[1].strip().strip('"').rstrip("/")
 
 API = f"{BASE_URL}/api"

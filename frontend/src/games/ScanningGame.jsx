@@ -43,6 +43,7 @@ const SCANS = [
     {
         id: "teammates_ahead",
         title: "Teammates ahead of the ball",
+        bannerPosition: "bottom",
         setup: [
             { id: "you", kit: "home", x: 0.50, y: 0.60, label: "CM", hasBall: true },
             { id: "t1", kit: "home", x: 0.28, y: 0.40, label: "LM" },
@@ -55,17 +56,19 @@ const SCANS = [
             { id: "gk", kit: "keeper", x: 0.50, y: 0.06, label: "GK" },
         ],
         question: "How many teammates were ahead of the ball?",
-        // Badges spread horizontally in the lower-middle band of the curtain.
+        // Badges spread horizontally BELOW the YOU player (y=0.60) so the
+        // recall layout doesn't cover where the scenario was.
         options: [
-            { key: "A", label: "2 teammates", short: "2 ahead", badge: { x: 0.25, y: 0.50 } },
-            { key: "B", label: "3 teammates", short: "3 ahead", correct: true, badge: { x: 0.50, y: 0.50 } },
-            { key: "C", label: "4 teammates", short: "4 ahead", badge: { x: 0.75, y: 0.50 } },
+            { key: "A", label: "2 teammates", short: "2 ahead", badge: { x: 0.25, y: 0.80 } },
+            { key: "B", label: "3 teammates", short: "3 ahead", correct: true, badge: { x: 0.50, y: 0.80 } },
+            { key: "C", label: "4 teammates", short: "4 ahead", badge: { x: 0.75, y: 0.80 } },
         ],
         explain: "Three red shirts were ahead of you: LM, RM, ST. The CB sits behind the ball and doesn't count.",
     },
     {
         id: "free_teammate_side",
         title: "Location of the unmarked teammate",
+        bannerPosition: "bottom",
         setup: [
             { id: "you", kit: "home", x: 0.50, y: 0.55, label: "CM", hasBall: true },
             { id: "tl", kit: "home", x: 0.22, y: 0.40, label: "LW" },
@@ -78,9 +81,9 @@ const SCANS = [
         ],
         question: "Which teammate was unmarked?",
         options: [
-            { key: "A", label: "Left wing", short: "Left wing", badge: { x: 0.22, y: 0.42 } },
-            { key: "B", label: "Centre striker", short: "Centre striker", badge: { x: 0.50, y: 0.36 } },
-            { key: "C", label: "Right wing", short: "Right wing", correct: true, badge: { x: 0.78, y: 0.42 } },
+            { key: "A", label: "Left wing", short: "Left wing", badge: { x: 0.22, y: 0.78 } },
+            { key: "B", label: "Centre striker", short: "Centre striker", badge: { x: 0.50, y: 0.78 } },
+            { key: "C", label: "Right wing", short: "Right wing", correct: true, badge: { x: 0.78, y: 0.78 } },
         ],
         explain: "The right winger had daylight — the nearest defender (LCB) was two zones away. Both left-wing and striker had a shadow on them.",
     },
@@ -109,6 +112,7 @@ const SCANS = [
     {
         id: "defensive_gap",
         title: "Gap in the defensive line",
+        bannerPosition: "bottom",
         setup: [
             { id: "you", kit: "home", x: 0.50, y: 0.62, label: "CM", hasBall: true },
             { id: "t_st", kit: "home", x: 0.50, y: 0.44, label: "ST" },
@@ -119,9 +123,9 @@ const SCANS = [
         ],
         question: "Where was the gap in the defensive line?",
         options: [
-            { key: "A", label: "Left (between LB & LCB)", short: "Left gap", badge: { x: 0.30, y: 0.50 } },
-            { key: "B", label: "Centre-right (between LCB & RB)", short: "Centre-right gap", correct: true, badge: { x: 0.60, y: 0.50 } },
-            { key: "C", label: "Right (outside RB)", short: "Outside RB", badge: { x: 0.88, y: 0.50 } },
+            { key: "A", label: "Left (between LB & LCB)", short: "Left gap", badge: { x: 0.25, y: 0.82 } },
+            { key: "B", label: "Centre-right (between LCB & RB)", short: "Centre-right gap", correct: true, badge: { x: 0.55, y: 0.82 } },
+            { key: "C", label: "Right (outside RB)", short: "Outside RB", badge: { x: 0.85, y: 0.82 } },
         ],
         explain: "The RCB was missing — a huge corridor between LCB and RB. That's your through-ball lane.",
     },
@@ -504,11 +508,15 @@ export default function ScanningGame({ onComplete }) {
 
                 {/* Centered scan banner — title + giant countdown so the user
                     immediately sees what they're scanning for and how long
-                    they have. Visible only during the scan window. */}
+                    they have. Anchors to bottom for scans where YOU sits
+                    in the upper/middle band so the player isn't covered. */}
                 {phase === "scanning" && (
                     <div
                         data-testid="scanning-countdown"
-                        className="pointer-events-none absolute inset-x-0 top-12 flex flex-col items-center"
+                        className={[
+                            "pointer-events-none absolute inset-x-0 flex flex-col items-center",
+                            sc.bannerPosition === "bottom" ? "bottom-4" : "top-12",
+                        ].join(" ")}
                     >
                         <div className="mx-auto flex max-w-2xl flex-col items-center border border-white/20 bg-black/75 px-8 py-5 backdrop-blur-sm">
                             <p className="ps-label text-ps-red">

@@ -9,8 +9,9 @@ Build a fully working browser-based football cognitive training platform called 
 ## Architecture
 
 - **Backend:** FastAPI + Motor (async MongoDB) at `/api/*`
+  - Modular layout (V1.5): `server.py` (thin entrypoint), `core.py` (db + limiter + logger), `routes/` (meta, contact, score, club_claim, leaderboard), `models/` (contact, score, club), `services/` (clubs canonicalization, seed)
 - **Frontend:** React 19 + Phaser.js 4 + Tailwind + Shadcn/UI + framer-motion
-- **DB:** MongoDB (collections: `contacts`, `scores`)
+- **DB:** MongoDB (collections: `contacts`, `scores`, `club_claims`)
 
 ## User Personas
 
@@ -33,32 +34,53 @@ Build a fully working browser-based football cognitive training platform called 
 - Demo mode under 60s flow: Reaction → Decision → Leaderboard
 - Dark sports-tech UI, Barlow Condensed + JetBrains Mono
 
-## What's Implemented (2026-02 — V1 → V1.1)
+## What's Implemented (2026-02 → 2026-05 — V1 → V1.5)
 
-### V1.1 changes (this iteration)
-- ✅ Shifted to red/black/white football-club editorial theme (Atleticos-inspired)
-- ✅ Added Sofia Sans Extra Condensed display font alongside Barlow Condensed
-- ✅ Hero redesigned: stadium photography, editorial headline with red-box highlight on "quicker." and italic red "smarter.", match-day HUD card with red top strip and diagonal corner
-- ✅ Demo setup now collects **Player name + Age (6-99) + Club/School (free text)** — no more hardcoded clubs
-- ✅ Reaction/Decision standalone game pages also moved to free-text club + age inputs
-- ✅ Backend: Score model accepts optional `age`, `club` is free-text (no allow-list); empty club rejected with 400
-- ✅ `/api/clubs` now returns distinct clubs from the scores collection (so leaderboard filter dynamically reflects real data)
-- ✅ Leaderboard component fetches club options dynamically
-- ✅ League-table leaderboard header strip in brand red
+### V1.6 changes (this iteration, 2026-05-12)
+- ✅ **Scanning drill (P0)** — new 3rd game type. 5 rounds of peripheral-awareness recall: pitch flashes for 5 seconds (visible countdown), then curtains and the player picks from 3 clickable on-pitch badges.
+- ✅ **Demo flow expanded to 4 games** — Reaction → Decision → Scanning → Leaderboard (5 stepper states). Football IQ composite now blends all three normalized 0–100.
+- ✅ **Pricing restructure** — Free £0 (personal leaderboard only), Individual £19 (global leaderboard), Team £199 (was £99, team leaderboard + everything in Individual), School Contact (global + school-wide), Academy Contact (global + academy-wide).
+- ✅ **Decision & Scanning games visual overhaul** —
+  - Player position labels (`ST`, `CB`, `LB`, etc.) sit BELOW each player on a dark pill for legibility against the pitch.
+  - The user's own player is highlighted in orange and labelled `YOU`.
+  - A/B/C button rows replaced with on-pitch clickable arrow-badges (Decision: through-ball / square pass / dribble loop / cross arc / cut-back, etc.; Scanning: spatial badges positioned in the recall zone).
+- ✅ **Backend scoring extended** — `gameType` now accepts `scanning`; leaderboard sorts scanning by score DESC. Seed populated with 15 curated scanning entries.
+- ✅ **Leaderboard component** — third tab `Scanning` added.
+
+### V1.5 changes
+- ✅ **Advisory rename (P0)** — Decision game scenario options are now flagged with `recommended: true` (was `correct: true`). All 4 scenarios updated; `|| o.correct` fallback removed from `DecisionGame.jsx`. `onComplete` payload now includes `matchesCoach` count.
+- ✅ **DecisionGamePage** standalone results now shows **"Aligned with coach"** (was "Correct") with `matchesCoach/total`.
+- ✅ **Backend refactor** — monolithic `server.py` (383 lines) split into `routes/` (5 routers), `models/` (3 modules), `services/` (clubs + seed), `core.py` (shared infra). `server.py` is now a 50-line thin entrypoint. Zero API contract changes — all endpoints identical.
+- ✅ **Test DB cleanup** — removed 43 stale TEST_* rows + 9 test contacts + 10 test club_claims accumulated across iterations.
+
+### V1.4 changes
+- ✅ **Reaction Game** — 5 rounds (down from 10), random green-circle position anywhere on the pitch; false-start detection kept
+- ✅ **Decision Game** — rebuilt vertically with proper football camera (goal at TOP, attack runs UPWARD, defenders sit between attackers and the top goal); 4 user-specified scenarios with realistic tactics + offside line drawn at the second-last defender:
+   1. **Channel Runner** — striker bends curved run from onside through the LB/LCB channel (correct: through-ball into channel)
+   2. **Wide Overload** — opposition full-back engages ball, your overlap arrives behind, CBs hold proper depth (correct: slip to overlapping LB)
+   3. **Defensive Shape** — compact back four, striker starts onside and bursts depth (correct: low through-ball before line resets)
+   4. **Winger in the Box** — three runners occupy near-post / spot / far-post, winger at byline (correct: whip across 6-yard line for near-post)
+- ✅ Offside line rendered as **red dashed horizontal line** at the deepest outfield defender's y-coordinate; properly excluded from box-scenario where it's not relevant
+- ✅ All 4 scenarios respect offside law — runners start onside before breaking the line
+- ✅ Goal area drawn at top: posts, 18-yard box, 6-yard box, penalty spot, D-arc; attack-direction arrow on left edge
+
+### V1.3 changes
+- ✅ **Pricing — 5 tiers**: Free £0, Individual Player £19/mo, Team £99/mo (Most Popular), School Contact-for-price, Academy Contact-for-price
+- ✅ Backend `canonical_club()` normalisation
+- ✅ Slowapi rate limiting with X-Forwarded-For key func + SlowAPIMiddleware
+- ✅ `POST /api/score` returns `isNewClub` flag
+- ✅ `POST /api/club-claim` endpoint for B2B lead capture
+- ✅ ClubClaimModal triggered when demo completes for a brand-new club
+- ✅ Curated top-15 seed leaderboard; user's row highlighted with **YOU** badge after submission; leaderboard auto-refreshes after each score saves
+
+### V1.2 (theme + free-text club)
+- ✅ Atleticos red/black/white football-club editorial theme; Sofia Sans Extra Condensed
+- ✅ Free-text Player name + Age + Club input; Hero with stadium photo
 
 ### V1 (original)
-- ✅ FastAPI backend with `/api/contact`, `/api/score`, `/api/leaderboard/{type}`, `/api/clubs`
-- ✅ Auto-seed of 40 sample scores across 3 sample clubs on first startup
-- ✅ Home page (Hero, Product Explainer, Audience Cards, Demo Preview, Leaderboard preview, Pricing, Contact CTA)
-- ✅ /pricing page with feature comparison table
-- ✅ /contact page with validated form + Sonner toasts
-- ✅ /demo flow (Setup → Reaction → Decision → Leaderboard)
-- ✅ /games/reaction & /games/decision standalone pages
-- ✅ /leaderboard page with club + weekly filters and Reaction/Decision tabs
-- ✅ Phaser ReactionGame (10 rounds, false-start, ms precision, score 0-1000)
-- ✅ Phaser DecisionGame (5 scenarios, pass/shoot/dribble, time-bar timeout)
+- ✅ FastAPI backend, React + Phaser 4 frontend
+- ✅ Home / Pricing / Contact / Demo / Leaderboard / Game pages
 - ✅ All elements use `data-testid`
-- ✅ README with structure + run instructions
 
 ## P0 / P1 / P2 Backlog
 

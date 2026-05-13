@@ -18,12 +18,12 @@ output "api_gateway_url" {
   value = aws_apigatewayv2_stage.default.invoke_url
 }
 
-output "leaderboard_table_name" {
-  value       = aws_dynamodb_table.decision_game_leaderboard.name
-  description = "DynamoDB leaderboard table name"
+output "contact_table_name" {
+  value       = aws_dynamodb_table.contacts.name
+  description = "DynamoDB contacts table name"
 }
 
-output "leaderboard_table_arn" {
-  value       = aws_dynamodb_table.decision_game_leaderboard.arn
-  description = "DynamoDB leaderboard table ARN"
+output "contact_table_arn" {
+  value       = aws_dynamodb_table.contacts.arn
+  description = "DynamoDB contacts table ARN"
 }

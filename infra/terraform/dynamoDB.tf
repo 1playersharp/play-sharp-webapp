@@ -1,34 +1,19 @@
-#resource "aws_dynamodb_table" "contacts" {
-#  name         = "${var.prefix}-contacts-leads"
-#  billing_mode = "PAY_PER_REQUEST"
-#  hash_key     = "id"
-#
-#  attribute {
-#    name = "id"
-#    type = "S"
-#  }
-#
-#  tags = {
-#    Name        = "${var.prefix}-contacts"
-#    Environment = var.environment 
-#  }
-#}
-#
-#resource "aws_dynamodb_table" "club_claims" {
-#  name         = "${var.prefix}-club-claims"
-#  billing_mode = "PAY_PER_REQUEST"
-#  hash_key     = "id"
-#
-#  attribute {
-#    name = "id"
-#    type = "S"
-#  }
-#
-#  tags = {
-#    Name        = "${var.prefix}-club-claims"
-#    Environment = var.environment
-#  }
-#}
+resource "aws_dynamodb_table" "contacts" {
+  name         = "${var.prefix}-contacts-leads"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  tags = {
+    Name        = "${var.prefix}-contacts"
+    Environment = var.environment 
+  }
+}
+
 #
 ## Leaderboard table optimized for cheap reads/writes
 ## Partition by game type, one item per player per game

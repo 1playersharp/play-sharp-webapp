@@ -22,8 +22,6 @@ resource "aws_lambda_function" "backend" {
       # MONGO_URL    = var.mongo_url
       # DB_NAME      = var.db_name
       CORS_ORIGINS = var.cors_origins
-      LEADERBOARD_TABLE = aws_dynamodb_table.decision_game_leaderboard.name
-      CLUB_CLAIMS_TABLE = aws_dynamodb_table.club_claims.name
       CONTACTS_TABLE = aws_dynamodb_table.contacts.name
       SNS_TOPIC_ARN = aws_sns_topic.contact_leads.arn
     }

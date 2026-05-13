@@ -35,25 +35,6 @@ data "aws_iam_policy_document" "lambda_default_exec" {
   }
 }
 
-data "aws_iam_policy_document" "leaderboard_policy_document" {
-  statement {
-    effect = "Allow"
-    actions = [
-      "dynamodb:Query",
-      "dynamodb:Scan",
-      "dynamodb:GetItem",
-      "dynamodb:UpdateItem",
-      "dynamodb:PutItem",
-      "dynamodb:BatchWriteItem"
-    ]
-    resources = [
-      aws_dynamodb_table.decision_game_leaderboard.arn,
-      aws_dynamodb_table.club_claims.arn,
-      "${aws_dynamodb_table.decision_game_leaderboard.arn}/index/*"
-    ]
-  }
-}
-
 #data "aws_iam_policy_document" "frontend_policy" {
 #  statement {
 #    actions   = [

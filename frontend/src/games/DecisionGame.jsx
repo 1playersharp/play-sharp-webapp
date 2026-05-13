@@ -32,6 +32,7 @@ const OPT_COLOR = {
     A: 0xdc1e28, // red
     B: 0xffffff, // white
     C: 0x2ead3c, // green
+    D: 0x3aa3ff, // blue
 };
 
 /* ============ Scenarios ============ */
@@ -89,7 +90,7 @@ const SCENARIOS = [
                 arrow: {
                     path: [{ x: 0.50, y: 0.62 }, { x: 0.50, y: 0.46 }],
                     style: "solid",
-                    badge: { x: 0.66, y: 0.55 },
+                    badge: { x: 0.50, y: 0.40 },
                 },
             },
         ],
@@ -98,6 +99,7 @@ const SCENARIOS = [
         id: "wide_overload",
         title: "Wide Overload",
         subtitle: "Their full-back stepped out, your overlap is sprinting in behind",
+        questionPosition: "bottom",
         setup: [
             { id: "you", kit: "home", x: 0.22, y: 0.45, label: "LM", hasBall: true },
             { id: "fb_overlap", kit: "home", x: 0.22, y: 0.62, label: "LB" },
@@ -194,13 +196,13 @@ const SCENARIOS = [
             },
             {
                 key: "B",
-                label: "Switch wide to the winger",
-                short: "Switch wide",
+                label: "Switch wide to the right winger",
+                short: "Switch RW",
                 reason: "Wastes the central momentum. Switching gives the back four time to drop with the striker and reset the offside trap.",
                 arrow: {
                     path: [{ x: 0.50, y: 0.70 }, { x: 0.65, y: 0.62 }, { x: 0.80, y: 0.55 }],
                     style: "solid",
-                    badge: { x: 0.68, y: 0.70 },
+                    badge: { x: 0.66, y: 0.66 },
                 },
             },
             {
@@ -211,7 +213,18 @@ const SCENARIOS = [
                 arrow: {
                     path: [{ x: 0.50, y: 0.70 }, { x: 0.50, y: 0.54 }],
                     style: "solid",
-                    badge: { x: 0.66, y: 0.62 },
+                    badge: { x: 0.50, y: 0.48 },
+                },
+            },
+            {
+                key: "D",
+                label: "Switch wide to the left winger",
+                short: "Switch LW",
+                reason: "Same problem as switching right — a long sideways ball lets the back four reset their shape and re-trap the striker. The vertical option was open.",
+                arrow: {
+                    path: [{ x: 0.50, y: 0.70 }, { x: 0.35, y: 0.62 }, { x: 0.20, y: 0.55 }],
+                    style: "solid",
+                    badge: { x: 0.34, y: 0.66 },
                 },
             },
         ],
