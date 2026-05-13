@@ -10,11 +10,12 @@ import pytest
 import requests
 from pathlib import Path
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
+BASE_URL = os.environ.get("VITE_BACKEND_URL", "") or os.environ.get("REACT_APP_BACKEND_URL", "")
+BASE_URL = BASE_URL.rstrip("/")
 if not BASE_URL:
-    env = Path("/app/frontend/.env").read_text()
+    env = Path("../../frontend/.env").read_text()
     for line in env.splitlines():
-        if line.startswith("REACT_APP_BACKEND_URL="):
+        if line.startswith("VITE_BACKEND_URL=") or line.startswith("REACT_APP_BACKEND_URL="):
             BASE_URL = line.split("=", 1)[1].strip().strip('"').rstrip("/")
 API = f"{BASE_URL}/api"
 
@@ -171,32 +172,6 @@ class TestContact:
         assert marker in names
         # most recent first → our marker should be early
         assert names.index(marker) < 5
-
-
-# ---------- Club claim ----------
-class TestClubClaim:
-    def test_post_get_club_claim_canonical(self, s):
-        marker = f"v14 lower club {uuid.uuid4().hex[:6]} fc"
-        time.sleep(PAUSE)
-        r = s.post(f"{API}/club-claim", json={
-            "club": marker,
-            "contactName": "TEST_v14_coach",
-            "email": "v14coach@example.com",
-            "role": "Head Coach",
-            "squadSize": 18,
-        })
-        assert r.status_code == 201, r.text
-        d = r.json()
-        # canonical form
-        assert d["club"].endswith("FC")
-        assert d["club"].split()[0] == "V14"
-        assert "_id" not in d
-        assert d["status"] == "new"
-
-        lst = s.get(f"{API}/club-claim")
-        assert lst.status_code == 200
-        clubs = [c["club"] for c in lst.json()]
-        assert d["club"] in clubs
 
 
 # ---------- Validation ----------

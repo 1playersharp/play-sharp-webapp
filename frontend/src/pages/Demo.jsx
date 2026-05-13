@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ReactionGame from "@/games/ReactionGame";
 import DecisionGame from "@/games/DecisionGame";
 import ScanningGame from "@/games/ScanningGame";
 import Leaderboard from "@/components/Leaderboard";
-import ClubClaimModal from "@/components/ClubClaimModal";
 import { Link } from "react-router-dom";
 import { Activity, Brain, Eye, Trophy, ArrowRight } from "lucide-react";
 import { submitScore } from "@/services/api";
@@ -26,10 +25,7 @@ export default function Demo() {
     const [decisionResult, setDecisionResult] = useState(null);
     const [scanningResult, setScanningResult] = useState(null);
     const [coachNotes, setCoachNotes] = useState([]);
-    const [isNewClub, setIsNewClub] = useState(false);
     const [canonicalClub, setCanonicalClub] = useState("");
-    const [claimOpen, setClaimOpen] = useState(false);
-    const [claimShown, setClaimShown] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
 
     const stepIdx = STEPS.findIndex((s) => s.key === step);
@@ -47,7 +43,6 @@ export default function Demo() {
                 reactionTime: payload.reactionTime ?? null,
             });
             if (res?.club) setCanonicalClub(res.club);
-            if (res?.isNewClub) setIsNewClub(true);
             setRefreshKey((k) => k + 1);
             const msg =
                 gameType === "reaction"
@@ -74,17 +69,6 @@ export default function Demo() {
         setScanningResult(result);
         await submit("scanning", result);
     };
-
-    // When we land on the leaderboard step with a new club, show the claim modal once.
-    useEffect(() => {
-        if (step === "leaderboard" && isNewClub && !claimShown) {
-            const t = setTimeout(() => {
-                setClaimOpen(true);
-                setClaimShown(true);
-            }, 900);
-            return () => clearTimeout(t);
-        }
-    }, [step, isNewClub, claimShown]);
 
     return (
         <div data-testid="demo-page">
@@ -450,12 +434,6 @@ export default function Demo() {
                 )}
             </section>
 
-            <ClubClaimModal
-                open={claimOpen}
-                club={canonicalClub || club.trim()}
-                playerName={name}
-                onClose={() => setClaimOpen(false)}
-            />
         </div>
     );
 }

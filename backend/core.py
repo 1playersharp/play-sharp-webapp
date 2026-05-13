@@ -1,4 +1,4 @@
-"""Shared backend infrastructure: env loading, DynamoDB tables, rate limiter, logger."""
+"""Shared backend infrastructure: env loading, MongoDB connection, rate limiter, logger."""
 
 import os
 import logging

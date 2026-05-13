@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
 from routes import api_router
-from services.seed import seed_sample_data
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -22,12 +21,5 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-async def on_startup():
-    try:
-        await seed_sample_data()
-    except Exception:
-        pass
 
 handler = Mangum(app)

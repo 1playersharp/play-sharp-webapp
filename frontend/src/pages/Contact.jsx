@@ -5,6 +5,8 @@ import { Mail, MapPin, Send, Loader2 } from "lucide-react";
 
 const initial = { name: "", email: "", club: "", message: "" };
 
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
 export default function Contact() {
     const [form, setForm] = useState(initial);
     const [submitting, setSubmitting] = useState(false);
@@ -18,6 +20,13 @@ export default function Contact() {
             toast.error("Please complete name, email, and message.");
             return;
         }
+
+        const email = form.email.trim();
+        if (!isValidEmail(email)) {
+            toast.error("Please enter a valid email address.");
+            return;
+        }
+
         setSubmitting(true);
         try {
             const payload = {

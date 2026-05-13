@@ -12,7 +12,6 @@ const http = axios.create({
 export const submitContact = (payload) => http.post("/contact", payload).then((r) => r.data);
 export const listClubs = () => http.get("/clubs").then((r) => r.data);
 export const submitScore = (payload) => http.post("/score", payload).then((r) => r.data);
-export const submitClubClaim = (payload) => http.post("/club-claim", payload).then((r) => r.data);
 export const fetchLeaderboard = (gameType, { club, period, limit } = {}) => {
     const params = {};
     if (club && club !== "All") params.club = club;

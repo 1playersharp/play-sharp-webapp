@@ -6,11 +6,12 @@ import pytest
 import requests
 from pathlib import Path
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
+BASE_URL = os.environ.get("VITE_BACKEND_URL", "") or os.environ.get("REACT_APP_BACKEND_URL", "")
+BASE_URL = BASE_URL.rstrip("/")
 if not BASE_URL:
-    env = Path("/app/frontend/.env").read_text()
+    env = Path("../../frontend/.env").read_text()
     for line in env.splitlines():
-        if line.startswith("REACT_APP_BACKEND_URL="):
+        if line.startswith("VITE_BACKEND_URL=") or line.startswith("REACT_APP_BACKEND_URL="):
             BASE_URL = line.split("=", 1)[1].strip().strip('"').rstrip("/")
 API = f"{BASE_URL}/api"
 
@@ -78,45 +79,6 @@ class TestIsNewClub:
         assert data["club"].lower() == unique_club.lower()
 
 
-# ---------- POST /api/club-claim ----------
-class TestClubClaim:
-    def test_create_valid_claim(self, s):
-        payload = {
-            "club": f"TEST Claim Club {uuid.uuid4().hex[:6]} FC",
-            "contactName": "TEST_Coach",
-            "email": "testcoach@example.com",
-            "role": "Head Coach",
-            "squadSize": 24,
-            "message": "Interested in pilot",
-        }
-        r = s.post(f"{API}/club-claim", json=payload)
-        assert r.status_code == 201, r.text
-        d = r.json()
-        # canonical_club normalises 'TEST' -> 'Test' (only FC/AFC/Un are preserved)
-        assert d["club"].endswith("FC")
-        assert "Claim Club" in d["club"]
-        assert d["contactName"] == "TEST_Coach"
-        assert d["status"] == "new"
-        assert "id" in d and "_id" not in d
-
-    def test_missing_required_field_returns_422(self, s):
-        r = s.post(f"{API}/club-claim", json={
-            "club": "TEST_MissingField",
-            "contactName": "X",
-            # missing email and role
-        })
-        assert r.status_code == 422
-
-    def test_list_claims_no_id_leak(self, s):
-        r = s.get(f"{API}/club-claim")
-        assert r.status_code == 200
-        items = r.json()
-        assert isinstance(items, list)
-        for it in items:
-            assert "_id" not in it
-            assert "id" in it and "club" in it
-
-
 # ---------- Leaderboard with canonical club filter ----------
 class TestLeaderboardCanonical:
     def test_lowercase_filter_finds_canonical_records(self, s):
@@ -131,20 +93,6 @@ class TestLeaderboardCanonical:
 # ---------- Rate limiting ----------
 # Run rate-limit tests LAST (they'll burn the budget for this IP). Named with zz_
 class TestZZRateLimit:
-    def test_club_claim_rate_limit_5_per_min(self, s):
-        # 6th request within a minute should 429. Use unique clubs to avoid body dup issues.
-        statuses = []
-        for i in range(7):
-            r = s.post(f"{API}/club-claim", json={
-                "club": f"TEST_RL_Claim_{uuid.uuid4().hex[:6]}",
-                "contactName": "RL_Tester",
-                "email": "rl@example.com",
-                "role": "Parent",
-            })
-            statuses.append(r.status_code)
-        assert 429 in statuses, f"Expected 429 within 7 requests, got {statuses}"
-        assert statuses.count(201) <= 5
-
     def test_score_rate_limit_20_per_min(self, s):
         statuses = []
         for i in range(22):

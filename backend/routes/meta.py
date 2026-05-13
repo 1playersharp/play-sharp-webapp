@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter
 
 from models import Club
-from services.dynamodb import leaderboard_table
+from services.mongodb import leaderboard_collection
 
 router = APIRouter()
 
@@ -18,21 +18,5 @@ async def root():
 @router.get("/clubs", response_model=List[Club])
 async def list_clubs():
     """Return distinct clubs that have submitted scores (used by leaderboard filter)."""
-    clubs = set()
-    response = leaderboard_table.scan(ProjectionExpression="club")
-    for item in response.get("Items", []):
-        club_name = item.get("club")
-        if isinstance(club_name, str) and club_name.strip():
-            clubs.add(club_name)
-
-    while "LastEvaluatedKey" in response:
-        response = leaderboard_table.scan(
-            ProjectionExpression="club",
-            ExclusiveStartKey=response["LastEvaluatedKey"],
-        )
-        for item in response.get("Items", []):
-            club_name = item.get("club")
-            if isinstance(club_name, str) and club_name.strip():
-                clubs.add(club_name)
-
+    clubs = [club for club in leaderboard_collection.distinct("club") if isinstance(club, str) and club.strip()]
     return [Club(name=n) for n in sorted(clubs)]

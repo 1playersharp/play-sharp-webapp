@@ -3,14 +3,12 @@
 import uuid
 from datetime import timezone
 
-from boto3.dynamodb.conditions import Attr
-from botocore.exceptions import ClientError
 from fastapi import APIRouter, HTTPException, Request
 
 from core import limiter
 from models import Score, ScoreCreate, ScoreResponse
 from services.clubs import canonical_club
-from services.dynamodb import leaderboard_table, best_score_rank
+from services.mongodb import insert_score, update_score, check_club_exists, best_score_rank
 
 router = APIRouter()
 
@@ -31,15 +29,7 @@ async def create_score(request: Request, payload: ScoreCreate):
     data = payload.model_dump()
     data["club"] = club_canon
     score = Score(**data)
-    is_new_club = False
-
-    club_check = leaderboard_table.scan(
-        FilterExpression=Attr("club").eq(club_canon),
-        ProjectionExpression="club",
-        Limit=1,
-    )
-    if not club_check.get("Items"):
-        is_new_club = True
+    is_new_club = not check_club_exists(club_canon)
 
     player_id = data.get("playerId") or str(uuid.uuid4())
     item = score.model_dump()
@@ -52,41 +42,13 @@ async def create_score(request: Request, payload: ScoreCreate):
         item.pop("reactionTime")
 
     if data.get("playerId"):
-        update_expressions = [
-            "#name = :name",
-            "club = :club",
-            "age = :age",
-            "score = :score",
-            "createdAt = :createdAt",
-            "best_score_rank = :best_score_rank",
-        ]
-        expression_values = {
-            ":name": item["name"],
-            ":club": item["club"],
-            ":age": item["age"],
-            ":score": item["score"],
-            ":createdAt": item["createdAt"],
-            ":best_score_rank": item["best_score_rank"],
-        }
-        if "reactionTime" in item:
-            update_expressions.insert(4, "reactionTime = :reactionTime")
-            expression_values[":reactionTime"] = item["reactionTime"]
-
-        try:
-            leaderboard_table.update_item(
-                Key={"game_type": score.gameType, "player_id": player_id},
-                UpdateExpression="SET " + ", ".join(update_expressions),
-                ExpressionAttributeNames={"#name": "name"},
-                ExpressionAttributeValues=expression_values,
-                ConditionExpression=(
-                    Attr("best_score_rank").not_exists() | Attr("best_score_rank").gt(item["best_score_rank"])
-                ),
-            )
-        except ClientError as exc:
-            error_code = exc.response.get("Error", {}).get("Code")
-            if error_code != "ConditionalCheckFailedException":
-                raise
+        # Try to update existing score
+        updated = update_score(score.gameType, player_id, item)
+        if not updated:
+            # Score was not better, but we still return success
+            pass
     else:
-        leaderboard_table.put_item(Item=item)
+        # Insert new score
+        insert_score(item)
 
     return ScoreResponse(**score.model_dump(), isNewClub=is_new_club)
