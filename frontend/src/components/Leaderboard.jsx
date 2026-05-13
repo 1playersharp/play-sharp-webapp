@@ -208,7 +208,7 @@ export default function Leaderboard({
                             r.name.trim().toLowerCase() === highlightName.trim().toLowerCase();
                         return (
                             <div
-                                key={r.id}
+                                key={r.id || r._id || idx}
                                 ref={isMe ? meRowRef : undefined}
                                 data-testid={`leaderboard-row-${idx}`}
                                 className={[
@@ -248,8 +248,9 @@ export default function Leaderboard({
                                 </div>
                                 <div className="col-span-3 text-right font-mono text-base font-bold text-white md:col-span-3">
                                     {gameType === "reaction"
-                                        ? `${r.reactionTime?.toFixed?.(0) ?? "—"} ms`
-                                        : `${r.score} pts`}
+                                        ? (typeof r.reactionTime === "number" ? `${Math.round(r.reactionTime)} ms`
+                                        : "— ms")
+                                    : `${r.score} pts`}
                                 </div>
                             </div>
                         );

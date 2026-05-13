@@ -42,9 +42,16 @@ def _normalize_game_type_field(score_data: dict) -> dict:
 
 def serialize_item(item: dict) -> dict:
     """Convert MongoDB document to JSON serializable dict."""
-    cleaned = {k: v for k, v in item.items() if k not in ("_id", "player_id", "best_score_rank")}
+    cleaned = {k: v for k, v in item.items() if k not in ("_id", "best_score_rank")}
+     # React needs stable id
+    cleaned["id"] = str(item.get("_id", ""))
+    # normalize game type naming
     if "game_type" in cleaned:
         cleaned["gameType"] = cleaned.pop("game_type")
+    # normalize reaction time naming (important for frontend)
+    if "reaction_time" in cleaned:
+        cleaned["reactionTime"] = cleaned.pop("reaction_time")
+
     return _convert_objectid(cleaned)
 
 
@@ -65,7 +72,7 @@ def get_leaderboard(
     limit: int = 20,
 ) -> List[Dict[str, Any]]:
     """Query leaderboard from MongoDB, sorted in Python."""
-    filter_query: dict = {"game_type": game_type}
+    filter_query: dict = {"game_type": game_type.lower()}
 
     if club and club != "All":
         from services.clubs import canonical_club
@@ -79,13 +86,14 @@ def get_leaderboard(
         leaderboard_collection.find(
             filter_query,
             {
-                "id": 1,
+                "_id": 1,
                 "name": 1,
                 "club": 1,
                 "age": 1,
                 "game_type": 1,
                 "score": 1,
                 "reactionTime": 1,
+                "reaction_time": 1,
                 "createdAt": 1,
             },
         )
@@ -94,9 +102,9 @@ def get_leaderboard(
     # sort in Python since best_score_rank is not stored in DB
     docs.sort(
         key=lambda d: calc_sort_key(
-            game_type,
+            game_type.lower(),
             d.get("score", 0),
-            d.get("reactionTime"),
+            d.get("reactionTime") or d.get("reaction_time"),
         )
     )
 
@@ -107,6 +115,10 @@ def insert_score(score_data: dict) -> None:
     """Insert a new score in MongoDB."""
     normalized = _normalize_game_type_field(score_data)
     # store sort key so we can use DB-level sorting in future
+
+    # enforce consistent casing (prevents empty leaderboard bugs)
+    normalized["game_type"] = normalized["game_type"].lower()
+
     normalized["best_score_rank"] = calc_sort_key(
         normalized["game_type"],
         normalized.get("score", 0),
@@ -117,7 +129,7 @@ def insert_score(score_data: dict) -> None:
 
 def update_score(game_type: str, player_id: str, score_data: dict) -> bool:
     """Update existing score if the new score is better."""
-    query = {"game_type": game_type, "player_id": player_id}
+    query = {"game_type": game_type.lower(), "player_id": player_id}
     existing = leaderboard_collection.find_one(query)
 
     normalized = _normalize_game_type_field(score_data)

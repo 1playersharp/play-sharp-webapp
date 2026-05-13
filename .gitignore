@@ -110,3 +110,6 @@ Thumbs.db
 # =========================
 *.log
 *.tmp
+
+# scripts
+infra/terraform/scripts/*

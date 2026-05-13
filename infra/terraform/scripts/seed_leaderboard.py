@@ -10,11 +10,11 @@ print("🔥 FILE LOADED: seed_leaderboard.py")
 # -----------------------------
 # MONGODB
 # -----------------------------
-uri = "mongodb+srv://1playersharp_db_user:8B0ov2DwyQeWK4nn@playerleaderboard.i4hhoqs.mongodb.net/?appName=PlayerLeaderboard"
+uri = "MONGU_URI"
 
 client = MongoClient(uri, server_api=ServerApi("1"))
 
-db = client["playsharp"]
+db = client["DB_NAME"]  # ← replace with your DB name if needed
 collection = db["leaderboard"]
 
 # -----------------------------
