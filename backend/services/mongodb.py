@@ -7,12 +7,20 @@ from bson import ObjectId
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("mongo")
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT_DIR / ".env")
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME = os.getenv("DB_NAME", "playsharp")
+
+logger.info("🧠 Mongo Config Loaded")
+logger.info(f"➡️ DB_NAME: {DB_NAME}")
+loggert.info(f"➡️ MONGO_URI: {'[REDACTED]' if MONGO_URI else 'Not set'}")
 
 client = MongoClient(MONGO_URI, server_api=ServerApi("1"))
 db = client[DB_NAME]
