@@ -47,7 +47,7 @@ variable "backend_lambda_output_file_path" {
 variable "backend_lambda_handler" {
   type = string
   description = "The backend lambda handler"
-  default = "backend_py.lambda_handler"
+  default = "backend_py.handler"
 }
 
 #CONTACT LEADS
@@ -75,3 +75,10 @@ variable "cors_origins" {
   description = "The cors origin"
   default = "*"
 }
+
+variable "db_name" {
+  type = string
+  description = "The MongoDB database name"
+  default = "PlayerLeaderboard"
+}
+

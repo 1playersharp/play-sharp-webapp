@@ -4,33 +4,57 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
-from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import logging
 
+# =========================
+# LOGGING
+# =========================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mongo")
 
+# =========================
+# REMOVE .env DEPENDENCY FOR LAMBDA
+# =========================
 ROOT_DIR = Path(__file__).resolve().parents[1]
-load_dotenv(ROOT_DIR / ".env")
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME = os.getenv("DB_NAME", "playsharp")
+# ❌ REMOVE THIS (Lambda should not depend on local files)
+# load_dotenv(ROOT_DIR / ".env")
 
-logger.info("🧠 Mongo Config Loaded")
-logger.info(f"➡️ DB_NAME: {DB_NAME}")
-loggert.info(f"➡️ MONGO_URI: {'[REDACTED]' if MONGO_URI else 'Not set'}")
+# =========================
+# ENV CONFIG (LAMBDA SAFE)
+# =========================
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME", "PlayerLeaderboard")
 
+# =========================
+# DEBUG LOGGING (SAFE)
+# =========================
+logger.info("========== MONGO CONFIG ==========")
+logger.info(f"DB_NAME: {DB_NAME}")
+logger.info(f"MONGO_URI present: {bool(MONGO_URI)}")
+
+if not MONGO_URI:
+    logger.error("❌ MONGO_URI is NOT SET in Lambda environment variables!")
+    raise ValueError("MONGO_URI is missing")
+
+# =========================
+# CONNECTION
+# =========================
 client = MongoClient(MONGO_URI, server_api=ServerApi("1"))
 db = client[DB_NAME]
 
 leaderboard_collection = db["leaderboard"]
 contacts_collection = db["contacts"]
 
+logger.info("✅ MongoDB connection initialized successfully")
 
+
+# =========================
+# HELPERS
+# =========================
 def _convert_objectid(value: Any) -> Any:
-    """Convert ObjectId to string for JSON serialization."""
     if isinstance(value, ObjectId):
         return str(value)
     if isinstance(value, dict):
@@ -41,7 +65,6 @@ def _convert_objectid(value: Any) -> Any:
 
 
 def _normalize_game_type_field(score_data: dict) -> dict:
-    """Ensure score documents use game_type internally."""
     normalized = score_data.copy()
     if "gameType" in normalized:
         normalized["game_type"] = normalized.pop("gameType")
@@ -49,14 +72,13 @@ def _normalize_game_type_field(score_data: dict) -> dict:
 
 
 def serialize_item(item: dict) -> dict:
-    """Convert MongoDB document to JSON serializable dict."""
     cleaned = {k: v for k, v in item.items() if k not in ("_id", "best_score_rank")}
-     # React needs stable id
+
     cleaned["id"] = str(item.get("_id", ""))
-    # normalize game type naming
+
     if "game_type" in cleaned:
         cleaned["gameType"] = cleaned.pop("game_type")
-    # normalize reaction time naming (important for frontend)
+
     if "reaction_time" in cleaned:
         cleaned["reactionTime"] = cleaned.pop("reaction_time")
 
@@ -64,22 +86,26 @@ def serialize_item(item: dict) -> dict:
 
 
 def calc_sort_key(game_type: str, score: int, reaction_time: float | None) -> float:
-    """Calculate sort key for leaderboard ordering (lower = better)."""
     if game_type == "reaction":
         return float(reaction_time if reaction_time is not None else score)
     return float(-score)
 
-# Maintain backward compatibility with older route imports.
+
 best_score_rank = calc_sort_key
 
 
+# =========================
+# MAIN QUERY
+# =========================
 def get_leaderboard(
     game_type: str,
     club: Optional[str] = None,
     period: str = "all",
     limit: int = 20,
 ) -> List[Dict[str, Any]]:
-    """Query leaderboard from MongoDB, sorted in Python."""
+
+    logger.info(f"📊 Fetching leaderboard: game_type={game_type}, club={club}, period={period}")
+
     filter_query: dict = {"game_type": game_type.lower()}
 
     if club and club != "All":
@@ -107,7 +133,8 @@ def get_leaderboard(
         )
     )
 
-    # sort in Python since best_score_rank is not stored in DB
+    logger.info(f"📦 Mongo returned {len(docs)} documents")
+
     docs.sort(
         key=lambda d: calc_sort_key(
             game_type.lower(),
@@ -120,11 +147,7 @@ def get_leaderboard(
 
 
 def insert_score(score_data: dict) -> None:
-    """Insert a new score in MongoDB."""
     normalized = _normalize_game_type_field(score_data)
-    # store sort key so we can use DB-level sorting in future
-
-    # enforce consistent casing (prevents empty leaderboard bugs)
     normalized["game_type"] = normalized["game_type"].lower()
 
     normalized["best_score_rank"] = calc_sort_key(
@@ -132,11 +155,11 @@ def insert_score(score_data: dict) -> None:
         normalized.get("score", 0),
         normalized.get("reactionTime"),
     )
+
     leaderboard_collection.insert_one(normalized)
 
 
 def update_score(game_type: str, player_id: str, score_data: dict) -> bool:
-    """Update existing score if the new score is better."""
     query = {"game_type": game_type.lower(), "player_id": player_id}
     existing = leaderboard_collection.find_one(query)
 
@@ -146,6 +169,7 @@ def update_score(game_type: str, player_id: str, score_data: dict) -> bool:
         normalized.get("score", 0),
         normalized.get("reactionTime"),
     )
+
     normalized["best_score_rank"] = new_rank
 
     if existing and existing.get("best_score_rank", float("inf")) <= new_rank:
@@ -156,5 +180,4 @@ def update_score(game_type: str, player_id: str, score_data: dict) -> bool:
 
 
 def check_club_exists(club: str) -> bool:
-    """Check if any scores exist for the given club."""
     return leaderboard_collection.count_documents({"club": club}) > 0

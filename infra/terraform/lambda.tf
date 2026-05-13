@@ -19,8 +19,8 @@ resource "aws_lambda_function" "backend" {
 
   environment {
     variables = {
-      # MONGO_URL    = var.mongo_url
-      # DB_NAME      = var.db_name
+      MONGO_URI = data.aws_ssm_parameter.mongo_uri.value
+      DB_NAME = var.db_name
       CORS_ORIGINS = var.cors_origins
       CONTACTS_TABLE = aws_dynamodb_table.contacts.name
       SNS_TOPIC_ARN = aws_sns_topic.contact_leads.arn
