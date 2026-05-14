@@ -36,11 +36,7 @@ data "aws_iam_policy_document" "lambda_default_exec" {
 }
 
 data "aws_ssm_parameter" "mongo_uri" {
-  name = "/playsharp/mongo_uri"
-}
-
-data "aws_ssm_parameter" "db_name" {
-  name = "/playsharp/db_name"
+  name = "playsharp_mongodb_uri"
 }
 
 #data "aws_iam_policy_document" "frontend_policy" {
