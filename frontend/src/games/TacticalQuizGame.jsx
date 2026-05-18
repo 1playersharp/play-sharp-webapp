@@ -7,7 +7,7 @@ const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap');
   @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
 
-  .tiq-root { font-family: 'Barlow', sans-serif; width: 100%; max-width: 640px; margin: 0 auto; padding: 1.5rem 1rem 2rem; box-sizing: border-box; }
+  .tiq-root { font-family: 'Barlow', sans-serif; width: 100%; max-width: 640px; margin: 0 auto; padding: 1.5rem 1rem 2rem; box-sizing: border-box; color: #1a1a1a; }
 
   /* pitch */
   .tiq-pitch { border-radius: 12px; overflow: hidden; margin-bottom: 1rem; background: #1a5c2a; }
@@ -64,21 +64,21 @@ const GLOBAL_CSS = `
 
   /* question */
   .tiq-question-card { background: #fff; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
-  .tiq-question-label { font-size: 11px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #888; margin-bottom: .45rem; }
-  .tiq-question-text { font-family: 'Barlow Condensed', sans-serif; font-size: 19px; font-weight: 700; line-height: 1.25; }
+  .tiq-question-label { font-size: 11px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #555; margin-bottom: .45rem; }
+  .tiq-question-text { font-family: 'Barlow Condensed', sans-serif; font-size: 19px; font-weight: 700; line-height: 1.25; color: #111; }
 
   /* options */
   .tiq-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
   @media(max-width:480px){ .tiq-options-grid { grid-template-columns: 1fr; } }
-  .tiq-opt { background: #fff; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px; padding: .7rem .9rem; text-align: left; cursor: pointer; transition: all .15s ease; display: flex; align-items: flex-start; gap: 9px; font-family: 'Barlow', sans-serif; font-size: 13.5px; font-weight: 500; line-height: 1.4; min-height: 54px; width: 100%; }
-  .tiq-opt:hover:not(:disabled) { border-color: #888; background: #f4f4f0; }
+  .tiq-opt { background: #fff; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px; padding: .7rem .9rem; text-align: left; cursor: pointer; transition: all .15s ease; display: flex; align-items: flex-start; gap: 9px; font-family: 'Barlow', sans-serif; font-size: 13.5px; font-weight: 500; line-height: 1.4; min-height: 54px; width: 100%; color: #111; }
+  .tiq-opt:hover:not(:disabled) { border-color: #555; background: #f0f0ec; }
   .tiq-opt:disabled { cursor: default; }
-  .tiq-opt.correct { background: #eaf3de; border-color: #639922; color: #27500a; }
-  .tiq-opt.chosen  { background: #f4f4f0; border-color: rgba(0,0,0,0.18); color: #888; opacity: .6; }
-  .tiq-opt.better  { background: #eaf3de; border-color: #639922; color: #27500a; }
-  .tiq-opt-letter { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #f4f4f0; border: 0.5px solid rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'Barlow Condensed', sans-serif; color: #555; margin-top: 1px; }
+  .tiq-opt.correct { background: #eaf3de; border-color: #639922; color: #1c3a08; }
+  .tiq-opt.chosen  { background: #ebebeb; border-color: rgba(0,0,0,0.18); color: #555; opacity: .75; }
+  .tiq-opt.better  { background: #eaf3de; border-color: #639922; color: #1c3a08; }
+  .tiq-opt-letter { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #e8e8e4; border: 0.5px solid rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'Barlow Condensed', sans-serif; color: #333; margin-top: 1px; }
   .tiq-opt.correct .tiq-opt-letter { background: #639922; border-color: #639922; color: #fff; }
-  .tiq-opt.chosen  .tiq-opt-letter { background: #aaa; border-color: #aaa; color: #fff; }
+  .tiq-opt.chosen  .tiq-opt-letter { background: #999; border-color: #999; color: #fff; }
   .tiq-opt.better  .tiq-opt-letter { background: #639922; border-color: #639922; color: #fff; }
   .tiq-better-badge { font-size: 10px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; background: #639922; color: #fff; border-radius: 3px; padding: 2px 6px; margin-left: auto; flex-shrink: 0; align-self: center; white-space: nowrap; }
 
