@@ -63,14 +63,14 @@ const GLOBAL_CSS = `
   .tiq-scenario-context { font-size: 12.5px; color: rgba(255,255,255,.6); line-height: 1.6; }
 
   /* question */
-  .tiq-question-card { background: #fff; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
-  .tiq-question-label { font-size: 11px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #555; margin-bottom: .45rem; }
-  .tiq-question-text { font-family: 'Barlow Condensed', sans-serif; font-size: 19px; font-weight: 700; line-height: 1.25; color: #111; }
+  .tiq-question-card { background: #fff; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 1.1rem 1.2rem; margin-bottom: 1rem; color: #000;}
+  .tiq-question-label { font-size: 11px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #222; margin-bottom: .45rem; }
+  .tiq-question-text { font-family: 'Barlow Condensed', sans-serif; font-size: 19px; font-weight: 700; line-height: 1.25; color: #000; }
 
   /* options */
   .tiq-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
   @media(max-width:480px){ .tiq-options-grid { grid-template-columns: 1fr; } }
-  .tiq-opt { background: #fff; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px; padding: .7rem .9rem; text-align: left; cursor: pointer; transition: all .15s ease; display: flex; align-items: flex-start; gap: 9px; font-family: 'Barlow', sans-serif; font-size: 13.5px; font-weight: 500; line-height: 1.4; min-height: 54px; width: 100%; color: #111; }
+  .tiq-opt { background: #fff; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px; padding: .7rem .9rem; text-align: left; cursor: pointer; transition: all .15s ease; display: flex; align-items: flex-start; gap: 9px; font-family: 'Barlow', sans-serif; font-size: 13.5px; font-weight: 500; line-height: 1.4; min-height: 54px; width: 100%; color: #000; opacity: 1; }
   .tiq-opt:hover:not(:disabled) { border-color: #555; background: #f0f0ec; }
   .tiq-opt:disabled { cursor: default; }
   .tiq-opt.correct { background: #eaf3de; border-color: #639922; color: #1c3a08; }
