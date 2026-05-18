@@ -12,14 +12,22 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 app = FastAPI(title="PlaySharp API", version="1.2.0")
-app.include_router(api_router)
+
+# Middleware BEFORE routers
+origins = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=origins,
     allow_credentials=True,
-    allow_origins=[os.environ.get("CORS_ORIGINS", "*")],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(api_router)
 
 handler = Mangum(app)

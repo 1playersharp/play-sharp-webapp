@@ -19,7 +19,7 @@ const previews = [
         to: "/games/decision",
         Icon: Brain,
         title: "Decision Drill",
-        meta: "4 SCENARIOS · ANIMATED",
+        meta: "5 SCENARIOS · ANIMATED",
         desc: "Animated football scenarios — channel runs, overloads, defensive shape, box arrivals. Watch the play unfold then pick A / B / C.",
     },
     {

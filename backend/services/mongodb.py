@@ -46,6 +46,8 @@ client = MongoClient(MONGO_URI, server_api=ServerApi("1"))
 db = client[DB_NAME]
 
 leaderboard_collection = db["leaderboard"]
+contacts_collection = db["contacts"]
+
 logger.info("✅ MongoDB connection initialized successfully")
 
 

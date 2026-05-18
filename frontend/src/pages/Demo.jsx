@@ -2,39 +2,41 @@ import { useState } from "react";
 import ReactionGame from "@/games/ReactionGame";
 import DecisionGame from "@/games/DecisionGame";
 import ScanningGame from "@/games/ScanningGame";
-import Leaderboard from "@/components/Leaderboard";
-import { Link } from "react-router-dom";
-import { Activity, Brain, Eye, Trophy, ArrowRight } from "lucide-react";
+import PressingGame from "@/games/PressingGame";
+import TacticalQuizGame from "@/games/TacticalQuizGame";
+import PassMoveGame from "@/games/PassMoveGame";
+import { Zap, Brain, Eye, Shield, ClipboardList, Navigation2 } from "lucide-react";
 import { submitScore } from "@/services/api";
 import { toast } from "sonner";
-
-const STEPS = [
-    { key: "intro", label: "Setup" },
-    { key: "reaction", label: "Reaction" },
-    { key: "decision", label: "Decision" },
-    { key: "scanning", label: "Scanning" },
-    { key: "leaderboard", label: "Leaderboard" },
-];
+import { set } from "date-fns";
 
 export default function Demo() {
     const [step, setStep] = useState("intro");
+
     const [name, setName] = useState("");
     const [club, setClub] = useState("");
     const [age, setAge] = useState("");
+    const [position, setPosition] = useState("");
+
+    const [activeGame, setActiveGame] = useState(null);
+
     const [reactionResult, setReactionResult] = useState(null);
     const [decisionResult, setDecisionResult] = useState(null);
     const [scanningResult, setScanningResult] = useState(null);
-    const [coachNotes, setCoachNotes] = useState([]);
-    const [canonicalClub, setCanonicalClub] = useState("");
+    const [pressingResult, setPressingResult] = useState(null);
+    const [tacticalQuizResult, setTacticalQuizResult] = useState(null);
+    const [passMoveResult, setPassMoveResult] = useState(null);
+
     const [refreshKey, setRefreshKey] = useState(0);
 
-    const stepIdx = STEPS.findIndex((s) => s.key === step);
-
+    // ---------- SAVE SCORE ----------
     const submit = async (gameType, payload) => {
         if (!name.trim() || !club.trim()) return;
+
         try {
             const parsedAge = age ? Number(age) : null;
-            const res = await submitScore({
+
+            await submitScore({
                 name: name.trim(),
                 club: club.trim(),
                 ...(parsedAge && parsedAge >= 6 && parsedAge <= 99 ? { age: parsedAge } : {}),
@@ -42,398 +44,301 @@ export default function Demo() {
                 score: payload.score,
                 reactionTime: payload.reactionTime ?? null,
             });
-            if (res?.club) setCanonicalClub(res.club);
+
             setRefreshKey((k) => k + 1);
-            const msg =
-                gameType === "reaction"
-                    ? `Reaction saved (${Math.round(payload.reactionTime)}ms)`
-                    : gameType === "decision"
-                        ? `Decision saved (${payload.score}/100)`
-                        : `Scanning saved (${payload.score}/100)`;
-            toast.success(msg);
+
+            toast.success(`${gameType} saved`);
         } catch {
-            toast.error("Couldn't save score (continuing demo)");
+            toast.error("Couldn't save score");
         }
     };
 
-    const handleReactionDone = async (result) => {
-        setReactionResult(result);
-        await submit("reaction", result);
-    };
-    const handleDecisionDone = async (result) => {
-        setDecisionResult(result);
-        if (Array.isArray(result.decisions)) setCoachNotes(result.decisions);
-        await submit("decision", result);
-    };
-    const handleScanningDone = async (result) => {
-        setScanningResult(result);
-        await submit("scanning", result);
+    // ---------- HANDLERS ----------
+    const handleReactionDone = async (r) => {
+        setReactionResult(r);
+        await submit("reaction", r);
     };
 
-    return (
-        <div data-testid="demo-page">
-            {/* Stepper */}
-            <section className="border-b border-white/10 bg-ps-surface/40">
-                <div className="mx-auto max-w-7xl px-6 py-6">
-                    <div className="flex items-center gap-3 overflow-x-auto">
-                        {STEPS.map((s, i) => {
-                            const active = i === stepIdx;
-                            const done = i < stepIdx;
-                            return (
-                                <div
-                                    key={s.key}
-                                    className="flex flex-none items-center gap-3"
-                                >
-                                    <span
-                                        className={[
-                                            "grid h-7 w-7 place-items-center border font-mono text-xs",
-                                            active
-                                                ? "border-ps-red bg-ps-red text-white"
-                                                : done
-                                                    ? "border-ps-turf bg-ps-turf/10 text-ps-turf"
-                                                    : "border-white/15 bg-ps-surface text-white/40",
-                                        ].join(" ")}
-                                    >
-                                        {i + 1}
-                                    </span>
-                                    <span
-                                        className={[
-                                            "font-heading text-xs font-bold uppercase tracking-[0.2em]",
-                                            active
-                                                ? "text-white"
-                                                : done
-                                                    ? "text-white/65"
-                                                    : "text-white/35",
-                                        ].join(" ")}
-                                    >
-                                        {s.label}
-                                    </span>
-                                    {i < STEPS.length - 1 && (
-                                        <span className="h-px w-8 bg-white/15" />
-                                    )}
-                                </div>
-                            );
-                        })}
+    const handleDecisionDone = async (r) => {
+        setDecisionResult(r);
+        await submit("decision", r);
+    };
+
+    const handleScanningDone = async (r) => {
+        setScanningResult(r);
+        await submit("scanning", r);
+    };
+
+    const handlePressingDone = async (r) => {
+        setPressingResult(r);
+        await submit("pressing", r);
+    };  
+
+    const handleTacticalQuizDone = async (r) => {
+        setTacticalQuizResult(r);
+        await submit("tactical_quiz", r);
+    };
+    
+    const handlePassMoveDone = async (r) => {
+        setPassMoveResult(r);
+        await submit("pass_move", r);
+    };  
+
+    
+    // ---------- FIFA STYLE PLAYER RATING ----------
+    const calculateIQ = () => {
+        const r = reactionResult?.score || 0;
+        const d = decisionResult?.score || 0;
+        const s = scanningResult?.score || 0;
+        const p = pressingResult?.score || 0;
+        const t = tacticalQuizResult?.score || 0;
+        const m = passMoveResult?.score || 0;
+
+        const rNorm = Math.min(100, r / 10);
+        return Math.round(rNorm * 0.2 + 
+            d * 0.2 + 
+            s * 0.2 + 
+            p * 0.2 + 
+            t * 0.1 + 
+            m * 0.1
+        );
+    };
+
+    const iq = calculateIQ();
+
+    // ---------- PLAYER CARD ----------
+    const PlayerCard = () => (
+        <div className="ps-card p-6 flex justify-between border border-white/10">
+            <div>
+                <p className="ps-label">Career Mode Profile</p>
+
+                <h1 className="text-2xl font-bold uppercase text-white mt-1">
+                    {name || "Player"}
+                </h1>
+
+                <p className="text-white/60 text-sm">
+                    {club || "No Club"} · Age {age || "—"} · {position || "—"}
+                </p>
+            </div>
+
+            <div className="text-right">
+                <p className="ps-label">Football IQ</p>
+                <div className="text-3xl font-bold text-ps-turf">
+                    {iq || "—"}
+                </div>
+                <p className="text-xs text-white/60 mt-1">
+                    Includes Reaction, Decision, Scanning, Pressing, Tactical Quiz, and Pass & Move scores
+                </p>
+            </div>
+        </div>
+    );
+
+    // =========================================================
+    // INTRO (SETUP SCREEN)
+    // =========================================================
+    if (step === "intro") {
+        return (
+            <div className="min-h-screen bg-ps-bg text-white p-6">
+                <div className="max-w-4xl mx-auto">
+                    <div className="ps-card p-8">
+                        <p className="ps-label">PlaySharp · Player Information</p>
+
+                        <h1 className="text-3xl font-bold uppercase mt-2">
+                            Enter Your Details
+                        </h1>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                            <input className="ps-input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+                            <input className="ps-input" placeholder="Club" value={club} onChange={(e) => setClub(e.target.value)} />
+                            <select className="ps-input"  value={age} onChange={(e) => setAge(e.target.value)} >
+                                <option value="">Select Age</option>
+                                {Array.from({ length: 11 }, (_, i) => {
+                                    const value = i + 8;
+                                    return (
+                                        <option key={value} value={value}>
+                                            {value} yrs
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            <select className="ps-input" value={position} onChange={(e) => setPosition(e.target.value)} >
+                                <option value="">Select Position</option>
+                                <option value="GK">Goalkeeper (GK)</option>
+                                
+                                <option value="CB">Centre Back (CB)</option>
+                                <option value="LB">Left Back (LB)</option>
+                                <option value="RB">Right Back (RB)</option>
+                                
+                                <option value="CDM">Defensive Midfielder (CDM)</option>
+                                <option value="CM">Central Midfielder (CM)</option>
+                                <option value="CAM">Attacking Midfielder (CAM)</option>
+                                
+                                <option value="LW">Left Wing (LW)</option>
+                                <option value="LM">Left Midfield (LM)</option>
+                                <option value="RM">Right Midfield (RM)</option>
+                                <option value="RW">Right Wing (RW)</option>
+                                
+                                <option value="ST">Striker (ST)</option>
+                            </select>
+                        </div>
+
+                        <button
+                            disabled={!name.trim() || !club.trim()}
+                            onClick={() => setStep("select-demo")}
+                            className="ps-btn-primary mt-6 w-full"
+                        >
+                            Continue to Training Hub
+                        </button>
                     </div>
                 </div>
-            </section>
+            </div>
+        );
+    }
 
-            <section className="mx-auto max-w-7xl px-6 py-12">
-                {step === "intro" && (
-                    <div data-testid="demo-step-intro" className="grid grid-cols-1 gap-10 lg:grid-cols-12">
-                        <div className="lg:col-span-7">
-                            <p className="ps-label">PlaySharp · 90s Demo</p>
-                            <h1 className="ps-section-title mt-3 text-5xl text-white md:text-6xl">
-                                Reaction → Decision → Scanning → Leaderboard.
-                            </h1>
-                            <p className="mt-5 max-w-xl text-base text-white/65">
-                                You'll run a 5-round reaction drill, a 4-scenario
-                                decision drill, a 5-round scanning drill, then see
-                                your scores on the global leaderboard. Built to take
-                                under 90 seconds.
-                            </p>
+    // =========================================================
+    // SELECT DEMO (FIFA HUB)
+    // =========================================================
+    return (
+        <div className="min-h-screen bg-ps-bg text-white p-6">
+            <div className="max-w-6xl mx-auto">
 
-                            <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-                                <div className="ps-card p-4">
-                                    <Activity size={16} className="text-ps-red" />
-                                    <p className="ps-label mt-3">Step 1</p>
-                                    <p className="mt-1 font-heading text-base font-bold uppercase text-white">
-                                        Reaction
-                                    </p>
-                                </div>
-                                <div className="ps-card p-4">
-                                    <Brain size={16} className="text-ps-red" />
-                                    <p className="ps-label mt-3">Step 2</p>
-                                    <p className="mt-1 font-heading text-base font-bold uppercase text-white">
-                                        Decision
-                                    </p>
-                                </div>
-                                <div className="ps-card p-4">
-                                    <Eye size={16} className="text-ps-red" />
-                                    <p className="ps-label mt-3">Step 3</p>
-                                    <p className="mt-1 font-heading text-base font-bold uppercase text-white">
-                                        Scanning
-                                    </p>
-                                </div>
-                                <div className="ps-card p-4">
-                                    <Trophy size={16} className="text-ps-turf" />
-                                    <p className="ps-label mt-3">Step 4</p>
-                                    <p className="mt-1 font-heading text-base font-bold uppercase text-white">
-                                        Rank
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                {/* PLAYER CARD */}
+                <PlayerCard />
 
-                        <div className="lg:col-span-5">
-                            <div className="ps-card p-8">
-                                <p className="ps-label">Player setup</p>
-                                <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                    <div className="sm:col-span-2">
-                                        <label className="ps-label" htmlFor="demo-name">Player name</label>
-                                        <input
-                                            id="demo-name"
-                                            data-testid="demo-input-name"
-                                            className="ps-input mt-2"
-                                            type="text"
-                                            placeholder="e.g. Marcus J."
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                        <label className="ps-label" htmlFor="demo-age">Age</label>
-                                        <input
-                                            id="demo-age"
-                                            data-testid="demo-input-age"
-                                            className="ps-input mt-2"
-                                            type="number"
-                                            min="6"
-                                            max="99"
-                                            placeholder="e.g. 17"
-                                            value={age}
-                                            onChange={(e) => setAge(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="mt-6">
-                                    <label className="ps-label" htmlFor="demo-club">Club / School</label>
-                                    <input
-                                        id="demo-club"
-                                        data-testid="demo-input-club"
-                                        className="ps-input mt-2"
-                                        type="text"
-                                        placeholder="e.g. South London FC"
-                                        value={club}
-                                        onChange={(e) => setClub(e.target.value)}
-                                    />
-                                </div>
-                                <button
-                                    data-testid="demo-start-button"
-                                    disabled={!name.trim() || !club.trim()}
-                                    onClick={() => setStep("reaction")}
-                                    className="ps-btn-primary mt-8 inline-flex w-full items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    Start Demo <ArrowRight size={14} />
-                                </button>
-                            </div>
-                        </div>
+                {/* TITLE */}
+                <div className="mt-8">
+                    <p className="ps-label">PlaySharp Training Hub</p>
+                    <h2 className="text-4xl font-bold uppercase">
+                        Select a Drill
+                    </h2>
+                </div>
+
+                {/* DRILL TILES */}
+                <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                    <div
+                        className="ps-card p-6 hover:scale-[1.03] transition cursor-pointer"
+                        onClick={() => setActiveGame("reaction")}
+                    >
+                        <Zap className="text-ps-gold" />
+                        <h3 className="mt-3 font-bold uppercase">Reaction</h3>
                     </div>
-                )}
 
-                {step === "reaction" && (
-                    <div data-testid="demo-step-reaction">
-                        <div className="mb-6 flex items-center justify-between">
-                            <div>
-                                <p className="ps-label">Step 1 / 4</p>
-                                <h2 className="font-heading text-3xl font-bold uppercase text-white">
-                                    Reaction Drill
-                                </h2>
-                            </div>
+                    <div
+                        className="ps-card p-6 hover:scale-[1.03] transition cursor-pointer"
+                        onClick={() => setActiveGame("decision")}
+                    >
+                        <Brain className="text-ps-pink" />
+                        <h3 className="mt-3 font-bold uppercase">Decision</h3>
+                    </div>
+
+                    <div
+                        className="ps-card p-6 hover:scale-[1.03] transition cursor-pointer"
+                        onClick={() => setActiveGame("scanning")}
+                    >
+                        <Eye className="text-ps-redDeep" />
+                        <h3 className="mt-3 font-bold uppercase">Scanning</h3>
+                    </div>
+
+                    <div
+                        className="ps-card p-6 hover:scale-[1.03] transition cursor-pointer"
+                        onClick={() => setActiveGame("pressing")}
+                    >
+                        <Shield className="text-ps-turf" />
+                        <h3 className="mt-3 font-bold uppercase">Pressing</h3>
+                    </div>
+
+                    <div
+                        className="ps-card p-6 hover:scale-[1.03] transition cursor-pointer"
+                        onClick={() => setActiveGame("tactical_quiz")}
+                    >
+                        <ClipboardList className="text-ps-blue" />
+                        <h3 className="mt-3 font-bold uppercase">Tactical Quiz</h3>
+                    </div>
+                    
+                    <div
+                        className="ps-card p-6 hover:scale-[1.03] transition cursor-pointer"
+                        onClick={() => setActiveGame("pass_move")}
+                    >
+                        <Navigation2 className="text-white" />
+                        <h3 className="mt-3 font-bold uppercase">Pass & Move</h3>
+                    </div>
+
+                </div>
+
+                {/* =====================================================
+                    TRAINING MODAL
+                ===================================================== */}
+                {activeGame && (
+                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-6">
+                        <div className="ps-card w-full max-w-4xl p-6">
+
                             <button
-                                data-testid="demo-skip-reaction"
-                                onClick={() => setStep("decision")}
-                                className="ps-btn-secondary"
+                                className="text-white/60 mb-4"
+                                onClick={() => setActiveGame(null)}
                             >
-                                Skip →
+                                ← Back to Hub
                             </button>
-                        </div>
-                        <ReactionGame
-                            onComplete={async (r) => {
-                                await handleReactionDone(r);
-                                setStep("decision");
-                            }}
-                        />
-                    </div>
-                )}
 
-                {step === "decision" && (
-                    <div data-testid="demo-step-decision">
-                        <div className="mb-6 flex items-center justify-between">
-                            <div>
-                                <p className="ps-label">Step 2 / 4</p>
-                                <h2 className="font-heading text-3xl font-bold uppercase text-white">
-                                    Decision Drill
-                                </h2>
-                            </div>
-                            <button
-                                data-testid="demo-skip-decision"
-                                onClick={() => setStep("scanning")}
-                                className="ps-btn-secondary"
-                            >
-                                Skip →
-                            </button>
-                        </div>
-                        <DecisionGame
-                            onComplete={async (r) => {
-                                await handleDecisionDone(r);
-                                setStep("scanning");
-                            }}
-                        />
-                    </div>
-                )}
-
-                {step === "scanning" && (
-                    <div data-testid="demo-step-scanning">
-                        <div className="mb-6 flex items-center justify-between">
-                            <div>
-                                <p className="ps-label">Step 3 / 4</p>
-                                <h2 className="font-heading text-3xl font-bold uppercase text-white">
-                                    Scanning Drill
-                                </h2>
-                            </div>
-                            <button
-                                data-testid="demo-skip-scanning"
-                                onClick={() => setStep("leaderboard")}
-                                className="ps-btn-secondary"
-                            >
-                                Skip →
-                            </button>
-                        </div>
-                        <ScanningGame
-                            onComplete={async (r) => {
-                                await handleScanningDone(r);
-                                setStep("leaderboard");
-                            }}
-                        />
-                    </div>
-                )}
-
-                {step === "leaderboard" && (
-                    <div data-testid="demo-step-leaderboard">
-                        <div className="mb-6 flex items-center justify-between">
-                            <div>
-                                <p className="ps-label">Step 4 / 4 · Complete</p>
-                                <h2 className="font-heading text-3xl font-bold uppercase text-white">
-                                    Your performance
-                                </h2>
-                            </div>
-                            <Link to="/contact">
-                                <button className="ps-btn-primary" data-testid="demo-finish-cta">
-                                    Talk to Sales
-                                </button>
-                            </Link>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <div className="ps-card p-6">
-                                <p className="ps-label">Reaction</p>
-                                <div className="ps-metric mt-3 text-ps-red">
-                                    {reactionResult
-                                        ? `${Math.round(reactionResult.reactionTime)}ms`
-                                        : "—"}
-                                </div>
-                                <p className="mt-2 text-xs text-white/45">
-                                    {reactionResult
-                                        ? `Score ${reactionResult.score}/1000`
-                                        : "Skipped"}
-                                </p>
-                            </div>
-                            <div className="ps-card p-6">
-                                <p className="ps-label">Decision</p>
-                                <div className="ps-metric mt-3 text-ps-turf">
-                                    {decisionResult ? `${decisionResult.score}/100` : "—"}
-                                </div>
-                                <p className="mt-2 text-xs text-white/45">
-                                    {decisionResult
-                                        ? `Avg ${Math.round(decisionResult.avgTime || 0)}ms across ${decisionResult.total} scenarios`
-                                        : "Skipped"}
-                                </p>
-                            </div>
-                            <div className="ps-card p-6" data-testid="demo-summary-scanning">
-                                <p className="ps-label">Scanning</p>
-                                <div className="ps-metric mt-3 text-white">
-                                    {scanningResult ? `${scanningResult.score}/100` : "—"}
-                                </div>
-                                <p className="mt-2 text-xs text-white/45">
-                                    {scanningResult
-                                        ? `${scanningResult.correct}/${scanningResult.total} correct · ${Math.round(scanningResult.avgTime || 0)}ms avg`
-                                        : "Skipped"}
-                                </p>
-                            </div>
-                            <div className="ps-card p-6">
-                                <p className="ps-label">Football IQ</p>
-                                <div className="ps-metric mt-3 text-white">
-                                    {(() => {
-                                        const r = reactionResult?.score || 0;
-                                        const d = decisionResult?.score || 0;
-                                        const s = scanningResult?.score || 0;
-                                        // Reaction normalized to 0-100 (raw is 0-1000) before blending.
-                                        const rNorm = Math.min(100, r / 10);
-                                        const iq = Math.round(rNorm * 0.35 + d * 0.35 + s * 0.30);
-                                        return iq || "—";
-                                    })()}
-                                </div>
-                                <p className="mt-2 text-xs text-white/45">
-                                    Composite metric
-                                </p>
-                            </div>
-                        </div>
-
-                        {coachNotes.length > 0 && (
-                            <div className="mt-12" data-testid="coach-notes-panel">
-                                <p className="ps-label text-ps-red">Coach's Notes</p>
-                                <h3 className="ps-section-title mt-2 text-2xl text-white md:text-3xl">
-                                    Advisory feedback on your decisions.
-                                </h3>
-                                <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    {coachNotes.map((d, i) => {
-                                        const matchesPick =
-                                            d.recommendedKey && d.recommendedKey === d.picked;
-                                        return (
-                                            <div
-                                                key={d.scenarioId}
-                                                data-testid={`coach-note-${i}`}
-                                                className="ps-card p-5"
-                                                style={{ borderLeft: "3px solid #DC1E28" }}
-                                            >
-                                                <p className="ps-label">
-                                                    Scenario {i + 1} · {d.scenarioTitle}
-                                                </p>
-                                                <p className="mt-3 font-display text-xs uppercase tracking-[0.2em] text-white/45">
-                                                    Your call · {d.picked} — {d.pickedLabel}
-                                                </p>
-                                                <p className="mt-2 font-body text-sm leading-relaxed text-white/80">
-                                                    {d.pickedReason}
-                                                </p>
-                                                {!matchesPick && d.recommendedLabel && (
-                                                    <div className="mt-4 border-t border-white/8 pt-3">
-                                                        <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-ps-turf">
-                                                            Coach's preferred call · {d.recommendedKey} — {d.recommendedLabel}
-                                                        </p>
-                                                        <p className="mt-2 font-body text-xs leading-relaxed text-white/55">
-                                                            {d.recommendedReason}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="mt-12">
-                            <h3 className="font-heading text-2xl font-bold uppercase text-white">
-                                Live Leaderboard
-                            </h3>
-                            <p className="ps-label mt-1">
-                                Your score is live · filter by club or week
-                            </p>
-                            <div className="mt-6">
-                                <Leaderboard
-                                    defaultGameType="reaction"
-                                    embed
-                                    limit={30}
-                                    refreshKey={refreshKey}
-                                    highlightName={name}
+                            {activeGame === "reaction" && (
+                                <ReactionGame
+                                    onComplete={async (r) => {
+                                        await handleReactionDone(r);
+                                        setActiveGame(null);
+                                    }}
                                 />
-                            </div>
+                            )}
+
+                            {activeGame === "decision" && (
+                                <DecisionGame
+                                    onComplete={async (r) => {
+                                        await handleDecisionDone(r);
+                                        setActiveGame(null);
+                                    }}
+                                />
+                            )}
+
+                            {activeGame === "scanning" && (
+                                <ScanningGame
+                                    onComplete={async (r) => {
+                                        await handleScanningDone(r);
+                                        setActiveGame(null);
+                                    }}
+                                />
+                            )}
+
+                            {activeGame === "pressing" && (
+                                <PressingGame
+                                    onComplete={async (r) => {
+                                        await handlePressingDone(r);
+                                        setActiveGame(null);
+                                    }}
+                                />
+                            )}  
+
+                            {activeGame === "tactical_quiz" && (
+                                <TacticalQuizGame
+                                    onComplete={async (r) => {
+                                        await handleTacticalQuizDone(r);
+                                        setActiveGame(null);
+                                    }}
+                                />
+                            )}
+
+                            {activeGame === "pass_move" && (
+                                <PassMoveGame
+                                    onComplete={async (r) => {
+                                        await handlePassMoveDone(r);
+                                        setActiveGame(null);
+                                    }}
+                                />
+                            )}
+
                         </div>
                     </div>
                 )}
-            </section>
 
+            </div>
         </div>
     );
 }

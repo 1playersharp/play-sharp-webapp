@@ -56,6 +56,11 @@ module.exports = {
                     defender: "#E63946",
                     ink: "#050505",
                     line: "rgba(255, 255, 255, 0.1)",
+                    blue: "#034781",
+                    purple: "#8b5cf6",
+                    pink: "#a72f6b",
+                    orange: "#ab5212",
+                    gold: "#aa8119",
                 },
                 chart: {
                     1: "hsl(var(--chart-1))",
