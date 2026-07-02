@@ -78,11 +78,11 @@ const SCENARIOS = [
       { label:"Bounce + vertical release", key:"third",  risk:"HIGH", rating:"A+", targetNx:0.50, targetNy:0.38, targetPlayerId:"st"  },
       { label:"Hold — wait for run",       key:"hold",   risk:"MED",  rating:"D",  targetNx:0.50, targetNy:0.52, targetPlayerId:null  },
     ],
-    // movement spaces shown after pass
+    // movement spaces shown after pass — placed in clear open areas
     moveOptions:[
-      { key:"support", label:"Support run — channel",   moveToNx:0.46, moveToNy:0.42, rating:"A+" },
-      { key:"wide",    label:"Break wide left",          moveToNx:0.34, moveToNy:0.46, rating:"B"  },
-      { key:"stay",    label:"Hold midfield position",   moveToNx:0.50, moveToNy:0.54, rating:"C"  },
+      { key:"support", label:"Support run",        moveToNx:0.42, moveToNy:0.41, rating:"A+" },
+      { key:"wide",    label:"Break wide left",    moveToNx:0.28, moveToNy:0.50, rating:"B"  },
+      { key:"stay",    label:"Hold position",      moveToNx:0.60, moveToNy:0.58, rating:"C"  },
     ],
     animations:{
       third:[
@@ -130,9 +130,9 @@ const SCENARIOS = [
       { label:"Drive inside for shot",      key:"drive",   risk:"LOW",  rating:"B-", targetNx:0.76, targetNy:0.56, targetPlayerId:null  },
     ],
     moveOptions:[
-      { key:"second", label:"Second-ball — penalty area", moveToNx:0.74, moveToNy:0.54, rating:"A+" },
-      { key:"post",   label:"Attack far post",             moveToNx:0.64, moveToNy:0.44, rating:"B"  },
-      { key:"stay",   label:"Stay byline",                 moveToNx:0.88, moveToNy:0.60, rating:"C"  },
+      { key:"second", label:"Second-ball",      moveToNx:0.70, moveToNy:0.62, rating:"A+" },
+      { key:"post",   label:"Attack far post",  moveToNx:0.56, moveToNy:0.50, rating:"B"  },
+      { key:"stay",   label:"Stay byline",      moveToNx:0.82, moveToNy:0.70, rating:"C"  },
     ],
     animations:{
       cutback:[
@@ -178,9 +178,9 @@ const SCENARIOS = [
       { label:"Track far-post runner",  key:"farpost",  risk:"MED",  rating:"C",  targetNx:0.32, targetNy:0.44, targetPlayerId:"olw"  },
     ],
     moveOptions:[
-      { key:"compact", label:"Block cutback lane",    moveToNx:0.52, moveToNy:0.40, rating:"A+" },
-      { key:"cover",   label:"Cover CB2 channel",     moveToNx:0.58, moveToNy:0.38, rating:"B"  },
-      { key:"engage",  label:"Engage attacker early", moveToNx:0.52, moveToNy:0.46, rating:"C"  },
+      { key:"compact", label:"Block cutback lane",  moveToNx:0.50, moveToNy:0.44, rating:"A+" },
+      { key:"cover",   label:"Cover CB2 channel",   moveToNx:0.66, moveToNy:0.46, rating:"B"  },
+      { key:"engage",  label:"Engage attacker",     moveToNx:0.36, moveToNy:0.48, rating:"C"  },
     ],
     animations:{
       block:[
@@ -229,9 +229,9 @@ const SCENARIOS = [
       { label:"Half-press — close softly", key:"half",  risk:"MED",  rating:"B-", targetNx:0.50, targetNy:0.34, targetPlayerId:"ocb"  },
     ],
     moveOptions:[
-      { key:"press2",  label:"Win ball — force turnover",   moveToNx:0.50, moveToNy:0.28, rating:"A+" },
-      { key:"screen",  label:"Screen DM passing lane",      moveToNx:0.50, moveToNy:0.36, rating:"B"  },
-      { key:"recover", label:"Hold high — recover shape",   moveToNx:0.50, moveToNy:0.44, rating:"C"  },
+      { key:"press2",  label:"Win ball",         moveToNx:0.38, moveToNy:0.32, rating:"A+" },
+      { key:"screen",  label:"Screen DM lane",   moveToNx:0.62, moveToNy:0.34, rating:"B"  },
+      { key:"recover", label:"Hold shape",       moveToNx:0.34, moveToNy:0.46, rating:"C"  },
     ],
     animations:{
       press:[
@@ -279,9 +279,9 @@ const SCENARIOS = [
       { label:"Pass wide right",  key:"wide",  risk:"HIGH", rating:"A+", targetNx:0.66, targetNy:0.50, targetPlayerId:"rw2"  },
     ],
     moveOptions:[
-      { key:"overlap", label:"Overlap right channel",      moveToNx:0.60, moveToNy:0.44, rating:"B"  },
-      { key:"support", label:"Support run central lane",   moveToNx:0.50, moveToNy:0.50, rating:"A+" },
-      { key:"hold",    label:"Hold midfield — shape",      moveToNx:0.46, moveToNy:0.58, rating:"C"  },
+      { key:"overlap", label:"Overlap right",   moveToNx:0.66, moveToNy:0.58, rating:"B"  },
+      { key:"support", label:"Support central", moveToNx:0.38, moveToNy:0.54, rating:"A+" },
+      { key:"hold",    label:"Hold midfield",   moveToNx:0.30, moveToNy:0.64, rating:"C"  },
     ],
     animations:{
       wide:[
@@ -708,90 +708,146 @@ function drawBall(ctx, W, H, ball) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DRAW PASS ARROWS (from YOU to each decision target, matching colour)
+// DRAW PASS ARROWS — shaft + arrowhead + "PASS A/B/C" label on arrow
 // ─────────────────────────────────────────────────────────────────────────────
 function drawPassArrows(ctx, W, H, sc, as, hovered, animT) {
   const you=as.players["you"]; if(!you) return;
   const fromPt=project(you.cx,you.cy,W,H);
+  const letters=["A","B","C"];
 
   sc.decisions.forEach((dec,i)=>{
     const col=DEC_COLS[i];
+    const letter=letters[i];
     const isHov=hovered===i;
     const toPt=project(dec.targetNx,dec.targetNy,W,H);
     const dx=toPt.x-fromPt.x, dy=toPt.y-fromPt.y;
     const d=Math.sqrt(dx*dx+dy*dy); if(d<1) return;
-    const nx=dx/d, ny=dy/d;
-    const sx=fromPt.x+nx*30, sy=fromPt.y+ny*30;
-    const ex=toPt.x-nx*20,   ey=toPt.y-ny*20;
+    const ux=dx/d, uy=dy/d;
+    const sx=fromPt.x+ux*30, sy=fromPt.y+uy*30;
+    const ex=toPt.x-ux*20,   ey=toPt.y-uy*20;
     const dashOff=-(animT*22)%16;
-    const alpha=isHov?1.0:0.72;
+    const alpha=isHov?1.0:0.78;
 
-    // glow on hover
+    // hover glow
     if(isHov){
-      ctx.save();ctx.globalAlpha=0.16;ctx.strokeStyle=col;ctx.lineWidth=18;ctx.lineCap="round";
+      ctx.save();ctx.globalAlpha=0.16;ctx.strokeStyle=col;ctx.lineWidth=20;ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();ctx.restore();
     }
+
     // shaft
     ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=col;
-    ctx.lineWidth=isHov?3.2:2.4;ctx.lineCap="round";
+    ctx.lineWidth=isHov?3.4:2.6;ctx.lineCap="round";
     ctx.setLineDash([10,5]);ctx.lineDashOffset=dashOff;
     ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
     ctx.setLineDash([]);ctx.lineDashOffset=0;
+
     // arrowhead
     const angle=Math.atan2(ey-sy,ex-sx);
     ctx.translate(ex,ey);ctx.rotate(angle);
     ctx.fillStyle=col;
     ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-14,-5.5);ctx.lineTo(-11,0);ctx.lineTo(-14,5.5);ctx.closePath();ctx.fill();
     ctx.restore();
+
     // origin dot
     ctx.save();ctx.globalAlpha=alpha*0.75;
-    ctx.beginPath();ctx.arc(sx,sy,4,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.restore();
+    ctx.beginPath();ctx.arc(sx,sy,4.5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.restore();
+
+    // ── "PASS A/B/C" label — pill on the arrow midpoint, offset perpendicularly ──
+    // perpendicular offset so label sits beside the shaft not on top of it
+    const midX=(sx+ex)/2, midY=(sy+ey)/2;
+    const perpX=-uy*22, perpY=ux*22;   // offset to the side
+    const lx=midX+perpX, ly=midY+perpY;
+    const tag=`PASS ${letter}`;
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.font=`bold 9px 'IBM Plex Mono',monospace`;
+    const tw=ctx.measureText(tag).width;
+    const pw=tw+12, ph=16;
+    // pill background
+    ctx.fillStyle="rgba(3,6,14,0.95)";
+    ctx.beginPath();ctx.roundRect(lx-pw/2,ly-ph/2,pw,ph,4);ctx.fill();
+    // pill border in matching colour
+    ctx.strokeStyle=col;ctx.lineWidth=1.4;ctx.stroke();
+    // text
+    ctx.fillStyle=col;ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(tag,lx,ly);
+    ctx.restore();
   });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DRAW MOVE ARROWS (from YOU to movement spaces — dashed arrow + coloured space circle)
+// DRAW MOVE ARROWS — dashed arrow + large space zone + "MOVE A/B/C" badge
 // ─────────────────────────────────────────────────────────────────────────────
 function drawMoveArrows(ctx, W, H, sc, as, hovered, chosenMoveIdx, animT) {
   const you=as.players["you"]; if(!you) return;
   const fromPt=project(you.cx,you.cy,W,H);
+  const letters=["A","B","C"];
 
   sc.moveOptions.forEach((mo,i)=>{
     const col=DEC_COLS[i];
+    const letter=letters[i];
     const isHov=hovered===i;
     const isChosen=chosenMoveIdx===i;
     const toPt=project(mo.moveToNx,mo.moveToNy,W,H);
     const dx=toPt.x-fromPt.x, dy=toPt.y-fromPt.y;
     const d=Math.sqrt(dx*dx+dy*dy); if(d<4) return;
-    const nx=dx/d, ny=dy/d;
-    const sx=fromPt.x+nx*28, sy=fromPt.y+ny*28;
-    const ex=toPt.x-nx*26,   ey=toPt.y-ny*26;
-    const alpha=chosenMoveIdx!==null?(isChosen?1.0:0.16):(isHov?1.0:0.68);
+    const ux=dx/d, uy=dy/d;
+    const sx=fromPt.x+ux*28, sy=fromPt.y+uy*28;
+    const ex=toPt.x-ux*38,   ey=toPt.y-uy*38;
+    const alpha=chosenMoveIdx!==null?(isChosen?1.0:0.14):(isHov?1.0:0.72);
     const dashOff=isChosen?0:-(animT*18)%16;
+    const zonePulse=isChosen?1.0:(0.6+Math.sin(animT*3.8+i*1.3)*0.4);
+    const zr=34;
 
-    // ── Space zone at destination ──
-    const zr=26;
-    // filled zone
+    // ── Space zone: filled + pulsing outer ring + inner ring ──
     ctx.save();
-    ctx.globalAlpha=alpha*(isHov||isChosen?0.22:0.10);
+    ctx.globalAlpha=alpha*(isHov||isChosen?0.26:0.13);
     ctx.fillStyle=col;
     ctx.beginPath();ctx.arc(toPt.x,toPt.y,zr,0,Math.PI*2);ctx.fill();
-    // pulsing ring
-    const zonePulse=isChosen?1:(0.55+Math.sin(animT*4+i*1.2)*0.45);
-    ctx.globalAlpha=alpha*zonePulse*(isHov||isChosen?0.85:0.55);
-    ctx.strokeStyle=col;ctx.lineWidth=2.2;
-    ctx.setLineDash([5,4]);
+    ctx.globalAlpha=alpha*zonePulse*(isHov||isChosen?0.90:0.60);
+    ctx.strokeStyle=col;ctx.lineWidth=isHov||isChosen?3.0:2.2;
+    ctx.setLineDash([6,4]);
     ctx.beginPath();ctx.arc(toPt.x,toPt.y,zr,0,Math.PI*2);ctx.stroke();
     ctx.setLineDash([]);
+    ctx.globalAlpha=alpha*(isHov||isChosen?0.45:0.28);
+    ctx.strokeStyle=col;ctx.lineWidth=1.0;
+    ctx.beginPath();ctx.arc(toPt.x,toPt.y,zr-9,0,Math.PI*2);ctx.stroke();
     ctx.restore();
 
-    // ── Arrow from YOU to space ──
+    // ── "MOVE A" badge above zone ──
+    const badgeY=toPt.y-zr-12;
+    const mTag=`MOVE ${letter}`;
+    ctx.save();
+    ctx.globalAlpha=alpha*(isHov||isChosen?1.0:0.85);
+    ctx.font=`bold 9.5px 'IBM Plex Mono',monospace`;
+    const mtw=ctx.measureText(mTag).width, mpw=mtw+14, mph=18;
+    ctx.fillStyle="rgba(3,6,14,0.96)";
+    ctx.beginPath();ctx.roundRect(toPt.x-mpw/2,badgeY-mph/2,mpw,mph,4);ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.stroke();
+    ctx.fillStyle=col;ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(mTag,toPt.x,badgeY);
+    ctx.restore();
+
+    // ── Description label below zone ──
+    const descY=toPt.y+zr+13;
+    ctx.save();
+    ctx.globalAlpha=alpha*0.80;
+    ctx.font=`bold 7.5px 'IBM Plex Mono',monospace`;
+    const dtw=ctx.measureText(mo.label).width, dpw=dtw+10, dph=13;
+    ctx.fillStyle="rgba(3,6,14,0.90)";
+    ctx.beginPath();ctx.roundRect(toPt.x-dpw/2,descY-dph/2,dpw,dph,3);ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=0.7;ctx.stroke();
+    ctx.fillStyle=col;ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(mo.label,toPt.x,descY);
+    ctx.restore();
+
+    // ── Arrow shaft from YOU to zone ──
     if(isHov&&chosenMoveIdx===null){
-      ctx.save();ctx.globalAlpha=0.15;ctx.strokeStyle=col;ctx.lineWidth=18;ctx.lineCap="round";
+      ctx.save();ctx.globalAlpha=0.14;ctx.strokeStyle=col;ctx.lineWidth=20;ctx.lineCap="round";
       ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();ctx.restore();
     }
     ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=col;
-    ctx.lineWidth=isHov||isChosen?3.2:2.4;ctx.lineCap="round";
+    ctx.lineWidth=isHov||isChosen?3.4:2.6;ctx.lineCap="round";
     ctx.setLineDash(isChosen?[]:[10,5]);ctx.lineDashOffset=dashOff;
     ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
     ctx.setLineDash([]);ctx.lineDashOffset=0;
@@ -799,18 +855,6 @@ function drawMoveArrows(ctx, W, H, sc, as, hovered, chosenMoveIdx, animT) {
     ctx.translate(ex,ey);ctx.rotate(angle);
     ctx.fillStyle=col;
     ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-14,-5.5);ctx.lineTo(-11,0);ctx.lineTo(-14,5.5);ctx.closePath();ctx.fill();
-    ctx.restore();
-
-    // ── Label inside the space circle ──
-    ctx.save();
-    ctx.globalAlpha=alpha*0.88;
-    ctx.font=`bold 8px 'IBM Plex Mono',monospace`;
-    const tw=ctx.measureText(mo.label).width, pw=Math.max(tw+10,48), ph=14;
-    ctx.fillStyle="rgba(3,6,14,0.92)";
-    ctx.beginPath();ctx.roundRect(toPt.x-pw/2,toPt.y-ph/2,pw,ph,3);ctx.fill();
-    ctx.strokeStyle=col;ctx.lineWidth=0.9;ctx.stroke();
-    ctx.fillStyle=col;ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.fillText(mo.label,toPt.x,toPt.y);
     ctx.restore();
   });
 }
@@ -1402,10 +1446,10 @@ export default function TacticalIQ({ onComplete }) {
         <div className="tiq-phase-dot" style={{
           background:gamePhase==="pass"?T.you:gamePhase==="move"?T.accentBlue:"rgba(255,255,255,0.28)"
         }}/>
-        {gamePhase==="pass"&&"Phase 1 — Select your passing option"}
-        {gamePhase==="animating"&&"Movement executing — watch the sequence…"}
-        {gamePhase==="move"&&"Phase 2 — Choose your movement into space"}
-        {(gamePhase==="moveAnim"||showFeedback)&&"Review complete — coaching feedback below"}
+        {gamePhase==="pass"&&"PHASE 1 — Click a PASS arrow (A, B or C) to make your pass decision"}
+        {gamePhase==="animating"&&"Executing movement — watch how the play develops…"}
+        {gamePhase==="move"&&"PHASE 2 — Click a MOVE zone (A, B or C) to choose where YOU run after passing"}
+        {(gamePhase==="moveAnim"||showFeedback)&&"Movement complete — coaching feedback below"}
       </div>
 
       <div className="tiq-pitch">
@@ -1421,8 +1465,8 @@ export default function TacticalIQ({ onComplete }) {
         />
 
         {gamePhase==="pass"&&<div className="tiq-scan">⊙ {sc.scanRequirement}</div>}
-        {gamePhase==="pass"&&<div className="tiq-hint">Click a coloured arrow to make your pass decision</div>}
-        {gamePhase==="move"&&<div className="tiq-hint">Click a space zone to choose your run</div>}
+        {gamePhase==="pass"&&<div className="tiq-hint">⬆ Click a coloured PASS arrow on the pitch — A, B or C</div>}
+        {gamePhase==="move"&&<div className="tiq-hint">⬆ Click a MOVE zone on the pitch — choose where to run after passing</div>}
 
         {showFeedback&&passDecIdx!==null&&(
           <FeedbackPanel scenario={sc} passDecIdx={passDecIdx} moveDecIdx={moveDecIdx} onNext={handleNext}/>
@@ -1440,13 +1484,20 @@ export default function TacticalIQ({ onComplete }) {
         <div className="tiq-bottom">
           {sc.decisions.map((dec,i)=>{
             const col=DEC_COLS[i];
+            const letter=["A","B","C"][i];
             const rc=dec.risk==="HIGH"?"rgba(240,60,60,0.16)":dec.risk==="MED"?"rgba(240,160,32,0.16)":"rgba(60,180,240,0.16)";
             const rtc=dec.risk==="HIGH"?T.accentRed:dec.risk==="MED"?T.accentAmber:T.accentBlue;
             return(
               <div key={i} className="tiq-card"
-                style={{borderColor:col+"55"}}
+                style={{borderColor:col+"66",borderWidth:1.5}}
                 onClick={()=>handlePassDecide(dec.key,i)}>
-                <div style={{width:11,height:11,borderRadius:"50%",background:col,flexShrink:0,boxShadow:`0 0 6px ${col}88`}}/>
+                {/* Coloured PASS A/B/C badge */}
+                <div style={{
+                  background:col,color:"#040810",
+                  fontFamily:"'IBM Plex Mono',monospace",fontSize:9,fontWeight:700,
+                  letterSpacing:"0.08em",padding:"3px 7px",borderRadius:3,flexShrink:0,
+                  whiteSpace:"nowrap",
+                }}>PASS {letter}</div>
                 <div className="tiq-card-text">{dec.label}</div>
                 <div className="tiq-risk" style={{background:rc,color:rtc,border:`1px solid ${rtc}44`}}>{dec.risk}</div>
               </div>
@@ -1460,15 +1511,25 @@ export default function TacticalIQ({ onComplete }) {
         <div className="tiq-bottom">
           {sc.moveOptions.map((mo,i)=>{
             const col=DEC_COLS[i];
+            const letter=["A","B","C"][i];
             return(
               <div key={i} className="tiq-card"
-                style={{borderColor:col+"55"}}
+                style={{borderColor:col+"66",borderWidth:1.5}}
                 onClick={()=>handleMoveDecide(i)}>
-                <div style={{width:11,height:11,borderRadius:"50%",background:col,flexShrink:0,boxShadow:`0 0 6px ${col}88`}}/>
+                {/* Coloured MOVE A/B/C badge */}
+                <div style={{
+                  background:"transparent",color:col,
+                  border:`1.5px solid ${col}`,
+                  fontFamily:"'IBM Plex Mono',monospace",fontSize:9,fontWeight:700,
+                  letterSpacing:"0.08em",padding:"3px 7px",borderRadius:3,flexShrink:0,
+                  whiteSpace:"nowrap",
+                }}>MOVE {letter}</div>
                 <div className="tiq-card-text">{mo.label}</div>
-                <div className="tiq-risk" style={{background:"rgba(200,240,32,0.10)",color:T.accent,border:`1px solid ${T.accent}33`,fontFamily:"'IBM Plex Mono',monospace",fontSize:8,padding:"2px 6px",borderRadius:2,whiteSpace:"nowrap",marginLeft:"auto",flexShrink:0}}>
-                  MOVE
-                </div>
+                <div style={{
+                  fontFamily:"'IBM Plex Mono',monospace",fontSize:8,padding:"2px 6px",
+                  borderRadius:2,whiteSpace:"nowrap",marginLeft:"auto",flexShrink:0,
+                  background:`${col}18`,color:col,border:`1px solid ${col}44`,
+                }}>{mo.rating}</div>
               </div>
             );
           })}
