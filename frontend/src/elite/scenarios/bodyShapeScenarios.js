@@ -3,13 +3,20 @@
  *
  * Each scenario:
  *   id, title, instruction
- *   passer:      { pos }
+ *   passer:      { pos }                       — z is in [8, 16]; the passer
+ *                                                sits behind the aim point
+ *                                                (z ≈ 2) so the wide shot has
+ *                                                depth from passer → receiver.
  *   playerStart: [x, 0, z]
- *   receivePoint:[x, 0, z]                — where the ball will arrive
- *   defenders:   [{ pos }]                — for orientation + first-touch scoring
+ *   receivePoint:[x, 0, z]                     — where the ball will arrive
+ *   defenders:   [{ pos }]                     — orientation + first-touch scoring
  *   passerCycle: { scanMinMs, scanMaxMs, readyMinMs, readyMaxMs }
- *   passAt:      ms                        — when the pass fires
- * The nearest defender to the receivePoint is used for body-orientation scoring.
+ *   passAt:      ms                             — auto-pass timeout if user
+ *                                                 never calls for the ball
+ *
+ * The dynamic wide → tight camera cut lives in the game component. Passers
+ * are kept in z ∈ [8, 16] so the wide shot always has both actors on-frame
+ * with real footballing depth between them.
  */
 
 export const BODY_SHAPE_SCENARIOS = [
@@ -39,7 +46,7 @@ export const BODY_SHAPE_SCENARIOS = [
     id: 'wide_receive',
     title: 'Receive Wide',
     instruction: 'Full-back at your back. Open up down the line and touch into space.',
-    passer: { pos: [-14, 0, 4] },
+    passer: { pos: [-14, 0, 10] },
     playerStart: [10, 0, 2],
     receivePoint: [12, 0, 2],
     defenders: [{ pos: [15, 0, 4] }],

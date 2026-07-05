@@ -20,6 +20,7 @@ import {
 import useEliteStore from '../../engine/useEliteStore';
 import EliteGameShell from '../../ui/EliteGameShell';
 import EliteScoreCard from '../../ui/EliteScoreCard';
+import EliteIntroCard from '../../ui/EliteIntroCard';
 import STRIKER_SCENARIOS from '../../scenarios/strikerScenarios';
 import { submitScore } from '@/services/api';
 import { toast } from 'sonner';
@@ -169,7 +170,16 @@ export default function StrikerEliteGame() {
   const keeperPressRef = useRef({ active: false });
 
   // Keeper dive animation, triggered the instant a finish is chosen.
-  const keeperDiveRef = useRef({ active: false, from: new THREE.Vector3(), lateralDir: 0, isChip: false, startTime: 0, duration: 650 });
+  // `to` is the ball's actual world target so the dive endpoint matches
+  // where the shot is heading, not a fixed left/right offset.
+  const keeperDiveRef = useRef({
+    active: false,
+    from: new THREE.Vector3(),
+    to: new THREE.Vector3(),
+    isChip: false,
+    startTime: 0,
+    duration: 650,
+  });
 
   const ballStateRef = useRef({
     mode: 'idle',
@@ -188,6 +198,10 @@ export default function StrikerEliteGame() {
   const [finished, setFinished] = useState(null);
   const [shotBar, setShotBar] = useState(1);
   const [touchBar, setTouchBar] = useState(1);
+  // Pre-game brief. Service is deferred on the first round until the user
+  // dismisses the intro.
+  const [showIntro, setShowIntro] = useState(true);
+  const pendingIntroRef = useRef(true);
 
   const totalRounds = STRIKER_SCENARIOS.length;
 
@@ -397,10 +411,12 @@ export default function StrikerEliteGame() {
     }
   };
 
-  // Cosmetic keeper reaction once a finish has been chosen — dives toward
-  // near/far post targets, or a smaller forward lunge + look-up for a chip
-  // they were never going to reach. Purely visual: scoring already froze
-  // the keeper's position at the moment of the strike.
+  // Cosmetic keeper reaction once a finish has been chosen. The dive
+  // endpoint IS the ball's target position — x lerps toward target.x,
+  // y arcs up to target.y, z pushes forward a fraction of the way toward
+  // the goal-line so the keeper looks like they're stretching for the
+  // shot rather than sliding along their starting Z. Purely visual:
+  // scoring already froze the keeper at the moment of the strike.
   const stepKeeperDive = (now) => {
     const dive = keeperDiveRef.current;
     if (!dive.active || !keeperRef.current) return;
@@ -409,15 +425,26 @@ export default function StrikerEliteGame() {
     const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
     if (dive.isChip) {
+      // Keeper knows they're beaten — small back-pedal + look up.
       mesh.position.x = dive.from.x;
       mesh.position.z = dive.from.z - Math.sin(t * Math.PI) * 0.4;
       mesh.rotation.x = -Math.sin(t * Math.PI) * 0.35;
     } else {
-      const arcY = Math.sin(t * Math.PI) * 0.9;
-      mesh.position.x = dive.from.x + dive.lateralDir * ease * 1.7;
-      mesh.position.y = arcY;
-      mesh.position.z = dive.from.z;
-      mesh.rotation.z = dive.lateralDir * ease * 1.1;
+      // Full dive — mesh lerps toward the target's actual x/y/z.
+      const dx = dive.to.x - dive.from.x;
+      const dz = dive.to.z - dive.from.z;
+      // Only push a fraction of the way in Z so the keeper stretches
+      // forward without literally teleporting into the net at t=1.
+      const zReach = 0.55;
+      mesh.position.x = dive.from.x + dx * ease;
+      mesh.position.z = dive.from.z + dz * ease * zReach;
+      // Vertical: reach up to target.y plus a small hop so low dives
+      // still leave the ground and high dives arc even further.
+      mesh.position.y = dive.to.y * ease + Math.sin(t * Math.PI) * 0.4;
+      // Body roll follows the lateral direction. Falls back to +1 for
+      // a rare exactly-central strike so the roll never flips to 0.
+      const rollDir = Math.sign(dx) || 1;
+      mesh.rotation.z = rollDir * ease * 1.1;
     }
     if (t >= 1) dive.active = false;
   };
@@ -622,7 +649,18 @@ export default function StrikerEliteGame() {
     phaseStartRef.current = performance.now();
     setPhaseBoth('intro');
 
-    // Kick off service after brief pause
+    // Kick off service after a brief pause — but on the first round wait for
+    // the user to dismiss the intro brief first.
+    if (!pendingIntroRef.current) {
+      phaseTimeoutRef.current = setTimeout(() => startService(), 700);
+    }
+  };
+
+  const dismissIntro = () => {
+    if (!pendingIntroRef.current) return;
+    pendingIntroRef.current = false;
+    setShowIntro(false);
+    // Same 700 ms pre-service beat the subsequent rounds get.
     phaseTimeoutRef.current = setTimeout(() => startService(), 700);
   };
 
@@ -776,17 +814,21 @@ export default function StrikerEliteGame() {
     ballStateRef.current.onDone = () => resolveShot(template, keeperPosAtStrike);
   };
 
-  // Kicks off the cosmetic keeper reaction — a lateral dive for near/far
-  // post targets, or a smaller forward lunge + look-up for a chip they
-  // were never going to reach.
+  // Kicks off the cosmetic keeper reaction. The dive endpoint IS the ball's
+  // world target (x, y, z) so the keeper actually goes toward wherever the
+  // shot is heading — not just a signed left/right offset. Chip is the one
+  // exception: keeper knows they're beaten and back-pedals + looks up.
   const startKeeperDive = (template, keeperPosAtStrike) => {
-    const targetWorld = new THREE.Vector3(template.offset[0], template.offset[1], GOAL_Z + template.offset[2]);
+    const targetWorld = new THREE.Vector3(
+      template.offset[0],
+      template.offset[1],
+      GOAL_Z + template.offset[2],
+    );
     const isChip = template.key === 'CH';
-    const lateral = targetWorld.x - keeperPosAtStrike.x;
     keeperDiveRef.current = {
       active: true,
       from: keeperPosAtStrike.clone(),
-      lateralDir: isChip ? 0 : (Math.sign(lateral) || 1),
+      to: targetWorld.clone(),
       isChip,
       startTime: performance.now(),
       duration: 650,
@@ -946,6 +988,20 @@ export default function StrikerEliteGame() {
         <div style={feedbackWrap}>
           <EliteScoreCard score={finished.score} reactionTime={finished.reactionTime} onBack={back} />
         </div>
+      )}
+
+      {showIntro && (
+        <EliteIntroCard
+          title="Striker · ELITE"
+          accent="#facc15"
+          objective="Read the goalkeeper. When the ball is served, click a coloured goal-mouth target and finish where the keeper cannot reach. Timing matters — the shot clock is unforgiving."
+          controls={[
+            { keys: 'Click',   action: 'Tap a coloured target inside the goal-mouth' },
+            { keys: 'Timing',  action: 'Shoot as soon as your first touch lands cleanly' },
+            { keys: 'Chip',    action: 'Only offered when the keeper is off their line' },
+          ]}
+          onStart={dismissIntro}
+        />
       )}
     </EliteGameShell>
   );

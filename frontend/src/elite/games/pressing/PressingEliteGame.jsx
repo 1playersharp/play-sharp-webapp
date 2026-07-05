@@ -13,6 +13,7 @@ import {
 import useEliteStore from '../../engine/useEliteStore';
 import EliteGameShell from '../../ui/EliteGameShell';
 import EliteScoreCard from '../../ui/EliteScoreCard';
+import EliteIntroCard from '../../ui/EliteIntroCard';
 import PRESSING_SCENARIOS from '../../scenarios/pressingScenarios';
 import { submitScore } from '@/services/api';
 import { toast } from 'sonner';
@@ -155,6 +156,10 @@ export default function PressingEliteGame() {
   const [pressResult, setPressResult] = useState(null);
   const [finished, setFinished] = useState(null);
   const [flashColor, setFlashColor] = useState(null);
+  // Pre-game brief. First-round pass sequence is deferred until the user
+  // dismisses the intro.
+  const [showIntro, setShowIntro] = useState(true);
+  const pendingIntroRef = useRef(true);
 
   const totalRounds = PRESSING_SCENARIOS.length;
 
@@ -532,12 +537,24 @@ export default function PressingEliteGame() {
     if (from) ballRef.current.position.set(from.mesh.position.x, 0.24, from.mesh.position.z);
 
     setPhaseBoth('intro');
+    if (pendingIntroRef.current) return;
+    beginSequence();
+  };
+
+  const beginSequence = () => {
     sequenceTimeoutRef.current = setTimeout(() => {
       passIndexRef.current = 0;
       passStartTimeRef.current = performance.now();
       setPhaseBoth('live');
       scheduleNextPass();
     }, 700);
+  };
+
+  const dismissIntro = () => {
+    if (!pendingIntroRef.current) return;
+    pendingIntroRef.current = false;
+    setShowIntro(false);
+    beginSequence();
   };
 
   const scheduleNextPass = () => {
@@ -679,6 +696,19 @@ export default function PressingEliteGame() {
         <div style={feedbackWrap}>
           <EliteScoreCard score={finished.score} reactionTime={finished.reactionTime} onBack={back} />
         </div>
+      )}
+
+      {showIntro && (
+        <EliteIntroCard
+          title="Pressing · ELITE"
+          accent="#2ead3c"
+          objective="Watch the opposition’s passing pattern. Trigger the press exactly when the highlighted teammate can intercept — too early or too late and possession slips."
+          controls={[
+            { keys: 'Space',   action: 'Trigger the press at the sharp moment' },
+            { keys: 'Watch',   action: 'The shrinking green ring shows the intercept window' },
+          ]}
+          onStart={dismissIntro}
+        />
       )}
     </EliteGameShell>
   );

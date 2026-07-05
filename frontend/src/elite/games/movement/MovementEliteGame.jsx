@@ -21,6 +21,7 @@ import {
 import useEliteStore from '../../engine/useEliteStore';
 import EliteGameShell from '../../ui/EliteGameShell';
 import EliteScoreCard from '../../ui/EliteScoreCard';
+import EliteIntroCard from '../../ui/EliteIntroCard';
 import MOVEMENT_SCENARIOS from '../../scenarios/movementScenarios';
 import { submitScore } from '@/services/api';
 import { toast } from 'sonner';
@@ -109,6 +110,10 @@ export default function MovementEliteGame() {
   const [feedback, setFeedback] = useState(null);
   const [finished, setFinished] = useState(null);
   const [hint, setHint] = useState('');
+  // Pre-game brief. Scene loads behind the modal; the round only begins
+  // once the user starts.
+  const [showIntro, setShowIntro] = useState(true);
+  const pendingIntroRef = useRef(true);
 
   const totalRounds = MOVEMENT_SCENARIOS.length;
 
@@ -439,10 +444,18 @@ export default function MovementEliteGame() {
     ballStateRef.current.mode = 'idle';
     ballStateRef.current.follow = 'passer';
 
-    // Enter moveIn step
-    startMoveIn();
+    // Enter moveIn step — but on the first round, wait for the user to
+    // dismiss the intro brief first.
+    if (!pendingIntroRef.current) startMoveIn();
 
     setRoundNumber(roundIdxRef.current + 1);
+  };
+
+  const dismissIntro = () => {
+    if (!pendingIntroRef.current) return;
+    pendingIntroRef.current = false;
+    setShowIntro(false);
+    startMoveIn();
   };
 
   const startMoveIn = () => {
@@ -776,6 +789,20 @@ export default function MovementEliteGame() {
         <div style={feedbackWrap}>
           <EliteScoreCard score={finished.score} reactionTime={finished.reactionTime} onBack={back} />
         </div>
+      )}
+
+      {showIntro && (
+        <EliteIntroCard
+          title="Movement · ELITE"
+          accent="#a3e635"
+          objective="A wall-pass rondo — YOU show for the ball, return it to the passer at his new spot, then break into the pocket he opens up. Read the space each step."
+          controls={[
+            { keys: 'Click zone',    action: 'Click a blue labelled zone to run YOU into that space' },
+            { keys: 'Click player',  action: 'Click a lime receiver to release the pass' },
+            { keys: 'Watch tempo',   action: 'Faster, cleaner sequences score higher' },
+          ]}
+          onStart={dismissIntro}
+        />
       )}
     </EliteGameShell>
   );

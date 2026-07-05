@@ -17,6 +17,7 @@ import {
 import useEliteStore from '../../engine/useEliteStore';
 import EliteGameShell from '../../ui/EliteGameShell';
 import EliteScoreCard from '../../ui/EliteScoreCard';
+import EliteIntroCard from '../../ui/EliteIntroCard';
 import BODY_SHAPE_SCENARIOS from '../../scenarios/bodyShapeScenarios';
 import { submitScore } from '@/services/api';
 import { toast } from 'sonner';
@@ -24,7 +25,10 @@ import { toast } from 'sonner';
 const PLAYER_SPEED = 4.2;
 const FIRST_TOUCH_WINDOW_MS = 800;
 const ORIENT_WINDOW_MS = 1000;               // ball flight duration
-const PASS_SETUP_WINDOW_MS = 2800;           // time to open hips + tap after receiving
+// Fixed 5-second windows so the on-screen countdown always lines up with
+// the underlying gameplay clock — no per-scenario drift.
+const PASS_TRIGGER_MS = 5000;                // fixed pre-pass wait (was scn.passAt)
+const PASS_SETUP_WINDOW_MS = 5000;           // fixed play-out window (was 2800)
 
 // Kick animation
 const KICK_DUR_MS = 520;
@@ -174,6 +178,64 @@ function dotDirScore(fx, fz, tx, tz) {
   return Math.round(((dot + 1) / 2) * 100);    // 0..100
 }
 
+// ----------------------------------------------------------------------------
+// Dynamic camera — wide establishing shot that fits BOTH passer and player,
+// then cuts tight to the player as soon as they receive.
+//
+// Takes live world coordinates so the same helper drives both the initial
+// snap at round-load AND the per-frame follow-cam during move/orient. That
+// stops the user shuffling YOU off-screen and the ball then flying off-frame.
+// ----------------------------------------------------------------------------
+
+const CAMERA_CUT_MS = 650;
+
+function computeWideCameraPose(passerX, passerZ, playerX, playerZ) {
+  const midX = (passerX + playerX) / 2;
+  const midZ = (passerZ + playerZ) / 2;
+  const spreadX = Math.abs(passerX - playerX);
+  const spreadZ = Math.abs(passerZ - playerZ);
+  // Generous minimum spread + margins so a couple of yards of movement is
+  // absorbed by the framing rather than pushing anyone off-frame.
+  const spread = Math.max(spreadX, spreadZ, 14);
+  const backDist = Math.min(34, spread * 1.2 + 16);
+  const height = Math.min(21, spread * 0.55 + 12);
+  return {
+    position: [midX, height, midZ + backDist],
+    target: [midX, 1.4, midZ],
+  };
+}
+
+// Tight shot on the LIVE player position at reception, so the cut always
+// lands where the ball actually arrived — regardless of how much the user
+// moved YOU during positioning.
+function computeTightCameraPose(playerX, playerZ) {
+  return {
+    position: [playerX, 6.2, playerZ + 7],
+    target: [playerX, 1.3, playerZ],
+  };
+}
+
+// Mid-shot: halfway between the wide establishing shot and the tight
+// reception cut. Used during play-out (passSetup / passResolve) so the
+// camera backs off the player's shoulder and you can see YOU + the pass
+// receivers + a bit of context, without going all the way back to wide.
+function computeMidCameraPose(playerX, playerZ, passerX, passerZ) {
+  const wide = computeWideCameraPose(passerX, passerZ, playerX, playerZ);
+  const tight = computeTightCameraPose(playerX, playerZ);
+  return {
+    position: [
+      (wide.position[0] + tight.position[0]) / 2,
+      (wide.position[1] + tight.position[1]) / 2,
+      (wide.position[2] + tight.position[2]) / 2,
+    ],
+    target: [
+      (wide.target[0] + tight.target[0]) / 2,
+      (wide.target[1] + tight.target[1]) / 2,
+      (wide.target[2] + tight.target[2]) / 2,
+    ],
+  };
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -200,6 +262,15 @@ export default function BodyShapeEliteGame() {
   const rotateDragRef = useRef({ active: false });
   const raycasterRef = useRef(new THREE.Raycaster());
   const groundPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+
+  // ---- Dynamic camera (wide → tight cut on receive) ----
+  const cameraTargetPointRef = useRef(new THREE.Vector3(0, 1.2, 2));
+  const cameraTweenRef = useRef({
+    active: false,
+    fromPos: new THREE.Vector3(), toPos: new THREE.Vector3(),
+    fromTarget: new THREE.Vector3(), toTarget: new THREE.Vector3(),
+    startTime: 0, duration: CAMERA_CUT_MS,
+  });
 
   const keysRef = useRef(new Set());
   const phaseRef = useRef('intro');
@@ -242,10 +313,37 @@ export default function BodyShapeEliteGame() {
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [finished, setFinished] = useState(null);
+  // Ceiling seconds of the current phase's countdown (5 → 1); 0 when not
+  // counting. Drives the big number under the RECEIVE / PASS badge.
+  const [countdown, setCountdown] = useState(0);
+  // Pre-game brief. Actors load into the scene behind the modal, but the
+  // pass timer waits until the user dismisses the intro.
+  const [showIntro, setShowIntro] = useState(true);
+  const pendingIntroRef = useRef(true);
 
   const totalRounds = BODY_SHAPE_SCENARIOS.length;
 
   const setPhaseBoth = (p) => { phaseRef.current = p; setPhase(p); };
+
+  // Drives the on-screen countdown for the two phases with a fixed 5-second
+  // clock (move → pass fires, passSetup → auto-resolve). Reads
+  // phaseStartRef.current, which those handlers stamp at phase-entry, so the
+  // number always matches the timeouts that actually fire the transitions.
+  useEffect(() => {
+    if (phase !== 'move' && phase !== 'passSetup') {
+      setCountdown(0);
+      return undefined;
+    }
+    const windowMs = phase === 'move' ? PASS_TRIGGER_MS : PASS_SETUP_WINDOW_MS;
+    const tick = () => {
+      const remainingMs = windowMs - (performance.now() - phaseStartRef.current);
+      const s = Math.max(0, Math.ceil(remainingMs / 1000));
+      setCountdown(s);
+    };
+    tick();
+    const id = setInterval(tick, 100);
+    return () => clearInterval(id);
+  }, [phase, roundIdx]);
   const clearPhaseTimeout = () => {
     if (phaseTimeoutRef.current) { clearTimeout(phaseTimeoutRef.current); phaseTimeoutRef.current = null; }
   };
@@ -428,6 +526,10 @@ export default function BodyShapeEliteGame() {
       updateBall(now);
       updateIdealArrow();
       updateRotateHandle();
+      // Camera: hard tween takes priority; otherwise gently follow the passer
+      // and player so wide-shot movement never pushes them off-frame.
+      stepCameraTween(now);
+      stepWideTracking();
 
       handles.renderer.render(handles.scene, handles.camera);
       rafRef.current = requestAnimationFrame(animate);
@@ -747,6 +849,74 @@ export default function BodyShapeEliteGame() {
   };
 
   // -------------------------------------------------------------------------
+  // Camera
+  // -------------------------------------------------------------------------
+
+  // Snaps camera + look-at target to a pose instantly. Used at round-load
+  // so every round opens clean on the wide establishing shot.
+  const applyCameraPoseImmediate = (pose) => {
+    const camera = handlesRef.current?.camera;
+    if (!camera) return;
+    camera.position.set(pose.position[0], pose.position[1], pose.position[2]);
+    cameraTargetPointRef.current.set(pose.target[0], pose.target[1], pose.target[2]);
+    camera.lookAt(cameraTargetPointRef.current);
+    cameraTweenRef.current.active = false;
+  };
+
+  // Starts an eased tween from the current camera pose to `pose` over
+  // `duration` ms. Used for the cut to the tight shot on reception.
+  const startCameraTween = (pose, duration = CAMERA_CUT_MS) => {
+    const camera = handlesRef.current?.camera;
+    if (!camera) return;
+    const tw = cameraTweenRef.current;
+    tw.fromPos.copy(camera.position);
+    tw.fromTarget.copy(cameraTargetPointRef.current);
+    tw.toPos.set(pose.position[0], pose.position[1], pose.position[2]);
+    tw.toTarget.set(pose.target[0], pose.target[1], pose.target[2]);
+    tw.startTime = performance.now();
+    tw.duration = duration;
+    tw.active = true;
+  };
+
+  const stepCameraTween = (now) => {
+    const camera = handlesRef.current?.camera;
+    const tw = cameraTweenRef.current;
+    if (!camera || !tw.active) return;
+    const t = Math.min(1, (now - tw.startTime) / tw.duration);
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    camera.position.lerpVectors(tw.fromPos, tw.toPos, ease);
+    cameraTargetPointRef.current.lerpVectors(tw.fromTarget, tw.toTarget, ease);
+    camera.lookAt(cameraTargetPointRef.current);
+    if (t >= 1) tw.active = false;
+  };
+
+  // Per-frame follow-cam during move/orient. Recomputes the ideal wide pose
+  // from CURRENT passer + player positions and lerps toward it, so if the
+  // user shuffles YOU sideways the shot re-frames instead of losing them.
+  // No-op if a hard tween is running (tight cut takes priority).
+  const stepWideTracking = () => {
+    const phaseNow = phaseRef.current;
+    if (phaseNow !== 'move' && phaseNow !== 'orient') return;
+    if (cameraTweenRef.current.active) return;
+    const camera = handlesRef.current?.camera;
+    const player = playerRef.current;
+    const passer = passerRef.current;
+    if (!camera || !player || !passer) return;
+    const ideal = computeWideCameraPose(
+      passer.mesh.position.x, passer.mesh.position.z,
+      player.mesh.position.x, player.mesh.position.z,
+    );
+    const rate = 0.045;
+    camera.position.x += (ideal.position[0] - camera.position.x) * rate;
+    camera.position.y += (ideal.position[1] - camera.position.y) * rate;
+    camera.position.z += (ideal.position[2] - camera.position.z) * rate;
+    cameraTargetPointRef.current.x += (ideal.target[0] - cameraTargetPointRef.current.x) * rate;
+    cameraTargetPointRef.current.y += (ideal.target[1] - cameraTargetPointRef.current.y) * rate;
+    cameraTargetPointRef.current.z += (ideal.target[2] - cameraTargetPointRef.current.z) * rate;
+    camera.lookAt(cameraTargetPointRef.current);
+  };
+
+  // -------------------------------------------------------------------------
   // Phase transitions
   // -------------------------------------------------------------------------
 
@@ -780,6 +950,13 @@ export default function BodyShapeEliteGame() {
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(mesh.quaternion);
         orientAtReceiveRef.current = { fx: forward.x, fz: forward.z };
         setPhaseBoth('firstTouch');
+        // Cut from the wide follow-cam to a tight shot on the player's LIVE
+        // position, so the reception lands centre-frame regardless of where
+        // the user moved to.
+        startCameraTween(
+          computeTightCameraPose(mesh.position.x, mesh.position.z),
+          CAMERA_CUT_MS,
+        );
         phaseTimeoutRef.current = setTimeout(() => {
           if (phaseRef.current === 'firstTouch' && !touchDirRef.current) {
             finishReceive();
@@ -883,9 +1060,23 @@ export default function BodyShapeEliteGame() {
 
     passTapRef.current = null;
     passShapeAtTapRef.current = null;
+    // Stamp phase start so the play-out countdown lines up with the fixed
+    // 5-second window.
+    phaseStartRef.current = performance.now();
     setPhaseBoth('passSetup');
 
-    // Auto-resolve at 2800ms if the user never taps.
+    // Back off the tight cut to a mid-shot for play-out so YOU isn't glued
+    // to the camera and the pass receivers are visible.
+    const pMesh = playerRef.current.mesh;
+    const passer = passerRef.current;
+    if (passer) {
+      startCameraTween(
+        computeMidCameraPose(pMesh.position.x, pMesh.position.z, passer.mesh.position.x, passer.mesh.position.z),
+        CAMERA_CUT_MS,
+      );
+    }
+
+    // Auto-resolve at PASS_SETUP_WINDOW_MS if the user never taps.
     phaseTimeoutRef.current = setTimeout(() => {
       if (phaseRef.current === 'passSetup' && !passTapRef.current) {
         autoResolveOut();
@@ -1092,6 +1283,16 @@ export default function BodyShapeEliteGame() {
       defenderRefs.current.push(buildActor(d.pos, ELITE_COLORS.away, String(i + 1)));
     });
 
+    // Snap to the wide establishing shot sized to this scenario's actual
+    // passer/player positions — so the passer at z=8–16 is never behind
+    // the camera and the pass path is always on-screen.
+    applyCameraPoseImmediate(
+      computeWideCameraPose(
+        scn.passer.pos[0], scn.passer.pos[2],
+        scn.playerStart[0], scn.playerStart[2],
+      ),
+    );
+
     const cyc = scn.passerCycle || { scanMinMs: 900, scanMaxMs: 1300, readyMinMs: 900, readyMaxMs: 1300 };
     passerStateRef.current.state = Math.random() < 0.5 ? 'scanning' : 'ready';
     passerStateRef.current.switchAt = performance.now() + (
@@ -1104,11 +1305,27 @@ export default function BodyShapeEliteGame() {
     ballStateRef.current.onDone = null;
     ballCarrierRef.current = 'passer';
 
+    // On the very first round we wait for the user to dismiss the intro
+    // brief before starting the pass timer. Actors are already in the scene
+    // (visible faintly behind the modal); the round clock just doesn't tick
+    // until dismissIntro() is called.
+    if (pendingIntroRef.current) return;
+    beginMovePhase();
+  };
+
+  const beginMovePhase = () => {
     phaseStartRef.current = performance.now();
     setPhaseBoth('move');
     phaseTimeoutRef.current = setTimeout(() => {
       if (phaseRef.current === 'move') triggerPass();
-    }, scn.passAt || 3000);
+    }, PASS_TRIGGER_MS);
+  };
+
+  const dismissIntro = () => {
+    if (!pendingIntroRef.current) return;
+    pendingIntroRef.current = false;
+    setShowIntro(false);
+    beginMovePhase();
   };
 
   const goNext = () => {
@@ -1160,6 +1377,14 @@ export default function BodyShapeEliteGame() {
 
       {phase !== 'done' && (
         <>
+          <style>{`
+            @keyframes ps-bs-badge-in {
+              0%   { transform: translate(-50%, -14px) scale(0.75); opacity: 0; }
+              55%  { transform: translate(-50%, 3px)  scale(1.08); opacity: 1; }
+              100% { transform: translate(-50%, 0)    scale(1);    opacity: 1; }
+            }
+          `}</style>
+
           <div style={hudTopLeft}>
             <div style={hudLabel}>SCORE</div>
             <div style={hudValue}>{score}</div>
@@ -1168,6 +1393,28 @@ export default function BodyShapeEliteGame() {
             <div style={hudLabel}>ROUND</div>
             <div style={hudValue}>{Math.min(roundIdx + 1, totalRounds)} / {totalRounds}</div>
           </div>
+
+          {/* Broadcast bug: RECEIVE (green) during move/orient/firstTouch,
+              PASS (amber) during passSetup/passResolve. Big countdown number
+              underneath in the two phases with an active clock. The
+              key prop re-mounts the badge on phase-group change so the
+              slide-in animation re-runs on each swap. */}
+          {isReceivePhase && (
+            <div key="badge-receive" style={{ ...phaseBadge, ...phaseBadgeReceive }}>
+              <div style={phaseBadgeLabel}>RECEIVE</div>
+              {phase === 'move' && (
+                <div style={phaseBadgeCountdown}>{countdown}</div>
+              )}
+            </div>
+          )}
+          {isPlayOutPhase && (
+            <div key="badge-pass" style={{ ...phaseBadge, ...phaseBadgePass }}>
+              <div style={phaseBadgeLabel}>PASS</div>
+              {phase === 'passSetup' && (
+                <div style={phaseBadgeCountdown}>{countdown}</div>
+              )}
+            </div>
+          )}
 
           {(isReceivePhase || isPlayOutPhase) && (
             <div style={promptWrap}>
@@ -1245,6 +1492,21 @@ export default function BodyShapeEliteGame() {
           <EliteScoreCard score={finished.score} reactionTime={finished.reactionTime} onBack={back} />
         </div>
       )}
+
+      {showIntro && (
+        <EliteIntroCard
+          title="Body Shape · ELITE"
+          accent="#38bdf8"
+          objective="Receive on the half-turn, then play out. Set your body shape before the ball arrives — the orange arrow is YOU, cyan is the ideal facing, lime tells you which teammate is asking for the ball."
+          controls={[
+            { keys: 'WASD',          action: 'Position YOU on the pitch' },
+            { keys: 'Drag ring',     action: 'Drag the orange ROTATE ring to open your body' },
+            { keys: 'Space',         action: 'Call for the ball when the passer’s head is up' },
+            { keys: 'Tap WASD',      action: 'First touch direction, then release the outgoing pass' },
+          ]}
+          onStart={dismissIntro}
+        />
+      )}
     </EliteGameShell>
   );
 }
@@ -1273,10 +1535,35 @@ const hudLabel = { fontSize: 9, letterSpacing: 2, color: 'rgba(255,255,255,0.55)
 const hudValue = { fontSize: 18, fontWeight: 800 };
 
 const promptWrap = {
-  position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)',
+  position: 'absolute', top: 220, left: '50%', transform: 'translateX(-50%)',
   background: 'rgba(0,0,0,0.55)', padding: '10px 18px', borderRadius: 6,
   textAlign: 'center', color: '#fff', maxWidth: 620,
   fontFamily: "'JetBrains Mono', monospace",
+};
+
+const phaseBadge = {
+  position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)',
+  minWidth: 180, padding: '10px 24px 12px',
+  borderRadius: 10, textAlign: 'center', color: '#fff',
+  fontFamily: "'JetBrains Mono', monospace",
+  boxShadow: '0 8px 26px rgba(0,0,0,0.5)',
+  animation: 'ps-bs-badge-in 0.42s ease-out',
+  zIndex: 20,
+};
+const phaseBadgeReceive = {
+  background: 'linear-gradient(135deg, #16a34a, #0f5132)',
+  border: '2px solid #2ead3c',
+};
+const phaseBadgePass = {
+  background: 'linear-gradient(135deg, #d97706, #7c2d12)',
+  border: '2px solid #f59e0b',
+};
+const phaseBadgeLabel = {
+  fontSize: 15, fontWeight: 900, letterSpacing: 5, textTransform: 'uppercase',
+};
+const phaseBadgeCountdown = {
+  fontSize: 44, fontWeight: 900, lineHeight: 1, marginTop: 4,
+  textShadow: '0 2px 6px rgba(0,0,0,0.55)',
 };
 const promptTitle = { fontSize: 11, letterSpacing: 2, color: '#facc15', marginBottom: 4 };
 const promptText = { fontSize: 13, lineHeight: 1.5 };

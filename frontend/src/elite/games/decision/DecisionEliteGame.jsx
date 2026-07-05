@@ -15,6 +15,7 @@ import {
 import useEliteStore from '../../engine/useEliteStore';
 import EliteGameShell from '../../ui/EliteGameShell';
 import EliteScoreCard from '../../ui/EliteScoreCard';
+import EliteIntroCard from '../../ui/EliteIntroCard';
 import DECISION_SCENARIOS from '../../scenarios/decisionScenarios';
 import { submitScore } from '@/services/api';
 import { toast } from 'sonner';
@@ -236,6 +237,10 @@ export default function DecisionEliteGame() {
   const [feedback, setFeedback] = useState(null);
   const [timeBar, setTimeBar] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  // Pre-game brief. Doesn't gate any timers — Decision naturally pauses on
+  // the 'preview' phase after loadRound, so we just render the modal on top
+  // and the round only starts on user action (which happens after dismiss).
+  const [showIntro, setShowIntro] = useState(true);
   const [finished, setFinished] = useState(null);
 
   const totalRounds = DECISION_SCENARIOS.length;
@@ -1019,6 +1024,20 @@ export default function DecisionEliteGame() {
         <div style={feedbackWrap}>
           <EliteScoreCard score={finished.score} reactionTime={finished.reactionTime} onBack={back} />
         </div>
+      )}
+
+      {showIntro && (
+        <EliteIntroCard
+          title="Decision · ELITE"
+          accent="#dc2626"
+          objective="Read each 3D scenario and pick the sharpest option before the timer runs out. Faster reads earn a speed bonus. Difficulty scales with your age."
+          controls={[
+            { keys: 'Click',    action: 'Tap an option marker on the pitch to make your call' },
+            { keys: '1 · 2 · 3 · 4', action: 'Pick option A through D by number' },
+            { keys: 'Space',    action: 'When told GET READY, hit Space to start the clock' },
+          ]}
+          onStart={() => setShowIntro(false)}
+        />
       )}
     </EliteGameShell>
   );
