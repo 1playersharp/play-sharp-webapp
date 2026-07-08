@@ -18,6 +18,7 @@ import useEliteStore from '../../engine/useEliteStore';
 import EliteGameShell from '../../ui/EliteGameShell';
 import EliteScoreCard from '../../ui/EliteScoreCard';
 import EliteIntroCard from '../../ui/EliteIntroCard';
+import useIsTouchDevice from '../../ui/useIsTouchDevice';
 import BODY_SHAPE_SCENARIOS from '../../scenarios/bodyShapeScenarios';
 import { submitScore } from '@/services/api';
 import { toast } from 'sonner';
@@ -244,6 +245,7 @@ export default function BodyShapeEliteGame() {
   const navigate = useNavigate();
   const location = useLocation();
   const playerProfile = (location.state && location.state.playerProfile) || {};
+  const isTouch = useIsTouchDevice();
 
   const containerRef = useRef(null);
   const handlesRef = useRef(null);
@@ -262,6 +264,12 @@ export default function BodyShapeEliteGame() {
   const rotateDragRef = useRef({ active: false });
   const raycasterRef = useRef(new THREE.Raycaster());
   const groundPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+
+  // ---- Touch-only tap-to-move target (Vector3 or null) ----
+  // On phones we replace WASD with tap-a-spot-on-pitch. `stepPlayer` walks
+  // YOU toward this each frame during the move phase and clears it on
+  // arrival or on phase change.
+  const moveTargetRef = useRef(null);
 
   // ---- Dynamic camera (wide → tight cut on receive) ----
   const cameraTargetPointRef = useRef(new THREE.Vector3(0, 1.2, 2));
@@ -473,18 +481,29 @@ export default function BodyShapeEliteGame() {
     };
 
     const onPointerDown = (e) => {
-      if (!canRotate()) return;
       const player = playerRef.current;
       if (!player) return;
       const world = worldFromEvent(e);
       if (!world) return;
       const dx = world.x - player.mesh.position.x;
       const dz = world.z - player.mesh.position.z;
-      if (Math.hypot(dx, dz) > DRAG_RADIUS) return;
-      rotateDragRef.current.active = true;
-      container.style.cursor = 'grabbing';
-      player.mesh.lookAt(world.x, 0, world.z);
-      e.preventDefault && e.preventDefault();
+      const dist = Math.hypot(dx, dz);
+
+      if (dist <= DRAG_RADIUS && canRotate()) {
+        rotateDragRef.current.active = true;
+        container.style.cursor = 'grabbing';
+        player.mesh.lookAt(world.x, 0, world.z);
+        e.preventDefault && e.preventDefault();
+        return;
+      }
+
+      // Tap outside the rotate ring during the move phase = tap-to-move.
+      // This replaces WASD on touch; still works on desktop for anyone
+      // who prefers clicking a spot over holding W/A/S/D.
+      if (dist > DRAG_RADIUS && phaseRef.current === 'move') {
+        moveTargetRef.current = new THREE.Vector3(world.x, 0, world.z);
+        e.preventDefault && e.preventDefault();
+      }
     };
     const onPointerMove = (e) => {
       if (!rotateDragRef.current.active) return;
@@ -623,6 +642,19 @@ export default function BodyShapeEliteGame() {
     triggerPass();
   };
 
+  // Touch-only direction pick — same effect as tapping WASD/arrow.
+  // Fires the first-touch resolve in firstTouch phase; fires the pass
+  // release in passSetup phase.
+  const onDirTap = (x, z) => {
+    const phaseNow = phaseRef.current;
+    if (phaseNow === 'firstTouch' && !touchDirRef.current) {
+      touchDirRef.current = { x, z };
+      finishReceive();
+    } else if (phaseNow === 'passSetup' && !passTapRef.current) {
+      handlePassTap(x, z);
+    }
+  };
+
   // -------------------------------------------------------------------------
   // Per-frame steps
   // -------------------------------------------------------------------------
@@ -687,23 +719,40 @@ export default function BodyShapeEliteGame() {
     // Body rotation is driven ENTIRELY by dragging the on-pitch rotate
     // handle now — no keyboard rotation. See onPointerDown/Move handlers.
 
-    // WASD movement only during move phase.
+    // WASD movement + tap-to-move only during move phase.
     if (phaseNow === 'move') {
       let dx = 0, dz = 0;
       if (k.has('w')) dz -= 1;
       if (k.has('s')) dz += 1;
       if (k.has('a')) dx -= 1;
       if (k.has('d')) dx += 1;
-      const len = Math.hypot(dx, dz);
-      if (len > 0) {
-        dx /= len; dz /= len;
+      const kbLen = Math.hypot(dx, dz);
+      if (kbLen > 0) {
+        // Keyboard input takes priority AND cancels any pending tap target.
+        moveTargetRef.current = null;
+        dx /= kbLen; dz /= kbLen;
         mesh.position.x += dx * PLAYER_SPEED * dt;
         mesh.position.z += dz * PLAYER_SPEED * dt;
         animatePlayerStep(mesh, true, dt);
+      } else if (moveTargetRef.current) {
+        const tx = moveTargetRef.current.x - mesh.position.x;
+        const tz = moveTargetRef.current.z - mesh.position.z;
+        const tDist = Math.hypot(tx, tz);
+        if (tDist < 0.15) {
+          moveTargetRef.current = null;
+          animatePlayerStep(mesh, false, dt);
+        } else {
+          const step = Math.min(tDist, PLAYER_SPEED * dt);
+          mesh.position.x += (tx / tDist) * step;
+          mesh.position.z += (tz / tDist) * step;
+          animatePlayerStep(mesh, true, dt);
+        }
       } else {
         animatePlayerStep(mesh, false, dt);
       }
     } else {
+      // Any non-move phase invalidates a stale tap target.
+      moveTargetRef.current = null;
       animatePlayerStep(mesh, false, dt);
     }
 
@@ -1455,6 +1504,25 @@ export default function BodyShapeEliteGame() {
               </div>
             </div>
           )}
+
+          {/* ---------- Touch-only controls ---------- */}
+          {isTouch && phase === 'move' && (
+            <button
+              style={callBtn}
+              onClick={(e) => { e.preventDefault(); callForBall(); }}
+              onTouchEnd={(e) => { e.preventDefault(); callForBall(); }}
+            >
+              CALL
+            </button>
+          )}
+          {isTouch && (phase === 'firstTouch' || phase === 'passSetup') && (
+            <div style={dpadWrap}>
+              <button style={{ ...dpadBtn, ...dpadUp }}    onClick={(e) => { e.preventDefault(); onDirTap(0, -1); }}>▲</button>
+              <button style={{ ...dpadBtn, ...dpadLeft }}  onClick={(e) => { e.preventDefault(); onDirTap(-1, 0); }}>◀</button>
+              <button style={{ ...dpadBtn, ...dpadRight }} onClick={(e) => { e.preventDefault(); onDirTap(1, 0); }}>▶</button>
+              <button style={{ ...dpadBtn, ...dpadDown }}  onClick={(e) => { e.preventDefault(); onDirTap(0, 1); }}>▼</button>
+            </div>
+          )}
         </>
       )}
 
@@ -1585,3 +1653,32 @@ const nextBtn = {
   color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace",
   letterSpacing: 1.4, fontSize: 12,
 };
+
+// ---------- Touch-only controls ----------
+const callBtn = {
+  position: 'absolute', bottom: 22, right: 22, zIndex: 22,
+  width: 92, height: 92, borderRadius: '50%',
+  background: 'linear-gradient(135deg, #2ead3c, #14532d)',
+  color: '#fff', fontWeight: 900, fontSize: 16, letterSpacing: 3,
+  border: '3px solid rgba(255,255,255,0.75)',
+  boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+  fontFamily: "'JetBrains Mono', monospace",
+  cursor: 'pointer', touchAction: 'manipulation',
+};
+const dpadWrap = {
+  position: 'absolute', bottom: 22, left: 22, zIndex: 22,
+  width: 156, height: 156,
+};
+const dpadBtn = {
+  position: 'absolute', width: 52, height: 52,
+  background: 'rgba(20, 20, 30, 0.85)', color: '#fff',
+  border: '2px solid rgba(255,255,255,0.55)', borderRadius: 8,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  fontSize: 22, fontFamily: "'JetBrains Mono', monospace",
+  boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+  cursor: 'pointer', touchAction: 'manipulation',
+};
+const dpadUp    = { top: 0,    left: 52 };
+const dpadDown  = { bottom: 0, left: 52 };
+const dpadLeft  = { top: 52,   left: 0 };
+const dpadRight = { top: 52,   right: 0 };

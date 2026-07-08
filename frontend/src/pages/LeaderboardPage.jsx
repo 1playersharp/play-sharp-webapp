@@ -8,10 +8,11 @@ export default function LeaderboardPage() {
                 <h1 className="ps-section-title mt-3 text-5xl text-white md:text-6xl">
                     Global Leaderboard.
                 </h1>
-                <p className="mt-4 max-w-xl text-base text-white/60">
-                    The fastest reactions and sharpest decisions across every
-                    PlaySharp club. Filter by club or check the weekly
-                    challenge.
+                <p
+                    data-testid="leaderboard-subtitle"
+                    className="mt-3 max-w-xl text-base font-medium text-white/75"
+                >
+                    See how you rank against other players.
                 </p>
 
                 <div className="mt-12">

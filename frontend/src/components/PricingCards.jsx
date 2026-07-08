@@ -22,7 +22,7 @@ const PLANS = [
     {
         key: "individual",
         name: "Individual Player",
-        price: "£19",
+        price: "£££",
         period: "/month",
         tagline: "For individual players.",
         features: [
@@ -42,7 +42,7 @@ const PLANS = [
     {
         key: "team",
         name: "Team",
-        price: "£249",
+        price: "£££",
         period: "/month",
         tagline: "For pro/semi-pro clubs & teams.",
         features: [

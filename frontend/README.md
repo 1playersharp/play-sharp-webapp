@@ -42,7 +42,7 @@ src/
 │   ├── ScanningGame.jsx
 │   ├── PressingGame.jsx
 │   ├── TacticalQuizGame.jsx
-│   └── PassMoveGame.jsx
+│   └── playermodel_schema.jsx
 │
 └── elite/
     ├── engine/

@@ -424,11 +424,34 @@ export default function StrikerEliteGame() {
     const t = Math.min(1, (now - dive.startTime) / dive.duration);
     const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
+    // Ready-pose arm values (from applyKeeperReadyPose). Used as the t=0
+    // anchor for every arm lerp below so the mesh flows out of the ready
+    // stance without a first-frame jump.
+    const READY_ARM_X = -0.45;
+    const READY_L_Z = 0.3;
+    const READY_R_Z = -0.3;
+    const arms = mesh.userData?.arms;
+    const armL = arms && arms[0];
+    const armR = arms && arms[1];
+
     if (dive.isChip) {
       // Keeper knows they're beaten — small back-pedal + look up.
       mesh.position.x = dive.from.x;
       mesh.position.z = dive.from.z - Math.sin(t * Math.PI) * 0.4;
       mesh.rotation.x = -Math.sin(t * Math.PI) * 0.35;
+
+      // Despairing arms — both flung overhead, synced to the back-pedal.
+      // Ready pose (-0.45) → overhead reach (~-2.6 rad) via a sine ramp.
+      const rise = Math.sin(t * Math.PI);
+      const overhead = READY_ARM_X + rise * (-2.15);
+      if (armL) {
+        armL.rotation.x = overhead;
+        armL.rotation.z = READY_L_Z + rise * 0.2;
+      }
+      if (armR) {
+        armR.rotation.x = overhead;
+        armR.rotation.z = READY_R_Z - rise * 0.2;
+      }
     } else {
       // Full dive — mesh lerps toward the target's actual x/y/z.
       const dx = dive.to.x - dive.from.x;
@@ -445,6 +468,30 @@ export default function StrikerEliteGame() {
       // a rare exactly-central strike so the roll never flips to 0.
       const rollDir = Math.sign(dx) || 1;
       mesh.rotation.z = rollDir * ease * 1.1;
+
+      // ---- Arms lead the dive so the hands actually reach the ball ----
+      //
+      // Vertical (rotation.x): both arms swing forward/up out of the
+      // ready pose. The reach angle scales off target.y so a top-corner
+      // save has the hands high and a low save has them near horizontal.
+      // Ready is -0.45; low targets land near -1.3, top corners near -2.4.
+      const heightBias = Math.min(1, dive.to.y / 2.0); // 0..1
+      const targetLift = -1.3 - heightBias * 1.1;
+      // Lateral (rotation.z): both arms shade toward the shot's side.
+      // For a right-side dive (rollDir=+1) both arms need to swing toward
+      // +X, which is NEGATIVE rotation.z at the shoulder for both arms
+      // (a downward-hanging arm rotates toward +X with -z). Hence the
+      // sign flip against rollDir.
+      const targetSide = -rollDir * 0.95;
+
+      if (armL) {
+        armL.rotation.x = READY_ARM_X + (targetLift - READY_ARM_X) * ease;
+        armL.rotation.z = READY_L_Z   + (targetSide - READY_L_Z)   * ease;
+      }
+      if (armR) {
+        armR.rotation.x = READY_ARM_X + (targetLift - READY_ARM_X) * ease;
+        armR.rotation.z = READY_R_Z   + (targetSide - READY_R_Z)   * ease;
+      }
     }
     if (t >= 1) dive.active = false;
   };

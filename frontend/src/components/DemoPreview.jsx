@@ -8,7 +8,7 @@ const TACTICAL_BG =
 const previews = [
     {
         key: "reaction",
-        to: "/games/reaction",
+        to: "/iq-training",
         Icon: Activity,
         title: "Reaction Drill",
         meta: "5 ROUNDS · MS PRECISION",
@@ -16,7 +16,7 @@ const previews = [
     },
     {
         key: "decision",
-        to: "/games/decision",
+        to: "/iq-training",
         Icon: Brain,
         title: "Decision Drill",
         meta: "5 SCENARIOS · ANIMATED",

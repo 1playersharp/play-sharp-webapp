@@ -14,6 +14,7 @@ import useEliteStore from '../../engine/useEliteStore';
 import EliteGameShell from '../../ui/EliteGameShell';
 import EliteScoreCard from '../../ui/EliteScoreCard';
 import EliteIntroCard from '../../ui/EliteIntroCard';
+import useIsTouchDevice from '../../ui/useIsTouchDevice';
 import PRESSING_SCENARIOS from '../../scenarios/pressingScenarios';
 import { submitScore } from '@/services/api';
 import { toast } from 'sonner';
@@ -128,6 +129,7 @@ export default function PressingEliteGame() {
   const navigate = useNavigate();
   const location = useLocation();
   const playerProfile = (location.state && location.state.playerProfile) || {};
+  const isTouch = useIsTouchDevice();
 
   const containerRef = useRef(null);
   const handlesRef = useRef(null);
@@ -659,6 +661,16 @@ export default function PressingEliteGame() {
               </div>
             )}
           </div>
+
+          {isTouch && phase === 'live' && (
+            <button
+              style={pressBtn}
+              onClick={(e) => { e.preventDefault(); tryPress(); }}
+              onTouchEnd={(e) => { e.preventDefault(); tryPress(); }}
+            >
+              PRESS
+            </button>
+          )}
         </>
       )}
 
@@ -758,4 +770,16 @@ const nextBtn = {
   padding: '10px 18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.4)',
   color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace",
   letterSpacing: 1.4, fontSize: 12,
+};
+
+// Touch-only PRESS button — replaces SPACE on phones.
+const pressBtn = {
+  position: 'absolute', bottom: 22, right: 22, zIndex: 22,
+  width: 108, height: 108, borderRadius: '50%',
+  background: 'linear-gradient(135deg, #2ead3c, #14532d)',
+  color: '#fff', fontWeight: 900, fontSize: 20, letterSpacing: 4,
+  border: '3px solid rgba(255,255,255,0.8)',
+  boxShadow: '0 6px 22px rgba(0,0,0,0.55)',
+  fontFamily: "'JetBrains Mono', monospace",
+  cursor: 'pointer', touchAction: 'manipulation',
 };

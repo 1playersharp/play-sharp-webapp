@@ -31,26 +31,42 @@ export default function Footer() {
                     <ul className="mt-4 space-y-3 font-body text-sm">
                         <li>
                             <Link
-                                to="/demo"
+                                to="/iq-training"
                                 className="text-white/65 hover:text-white"
                             >
-                                Live Demo
+                                Training Games
                             </Link>
                         </li>
                         <li>
                             <Link
-                                to="/games/reaction"
+                                to="/dna"
                                 className="text-white/65 hover:text-white"
                             >
-                                Reaction Drill
+                                PlaySharp DNA
                             </Link>
                         </li>
                         <li>
                             <Link
-                                to="/games/decision"
+                                to="/schedule"
                                 className="text-white/65 hover:text-white"
                             >
-                                Decision Drill
+                                Schedule
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                to="/objectives"
+                                className="text-white/65 hover:text-white"
+                            >
+                                Objectives
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                to="/video-upload"
+                                className="text-white/65 hover:text-white"
+                            >
+                                Video Upload
                             </Link>
                         </li>
                         <li>
