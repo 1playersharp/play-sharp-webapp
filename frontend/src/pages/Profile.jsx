@@ -100,8 +100,8 @@ export default function Profile() {
                     </p>
                     <p className="mt-1 text-sm text-white/70">
                         Save your name, position, team and preferred foot to
-                        access Schedule, Objectives, Training Games, Tactics
-                        Quiz, Video Upload and Leaderboard.
+                        access Schedule, Objectives, Tactics Quiz, Training
+                        Games, Video Upload and Leaderboard.
                     </p>
                     {missing.length > 0 && (
                         <ul className="mt-3 flex flex-wrap gap-2">

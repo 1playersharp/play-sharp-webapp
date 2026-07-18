@@ -8,8 +8,8 @@ const APP_LINKS = [
     { to: '/dna',          label: 'PlaySharp DNA',  testId: 'nav-dna',          gated: true },
     { to: '/schedule',     label: 'Schedule',       testId: 'nav-schedule',     gated: true },
     { to: '/objectives',   label: 'Objectives',     testId: 'nav-objectives',   gated: true },
-    { to: '/iq-training',  label: 'Training Games', testId: 'nav-iq-training',  gated: true },
     { to: '/tactics-quiz', label: 'Tactics Quiz',   testId: 'nav-tactics-quiz', gated: true },
+    { to: '/iq-training',  label: 'Training Games', testId: 'nav-iq-training',  gated: true },
     { to: '/video-upload', label: 'Video Analysis', testId: 'nav-video-upload', gated: true },
     { to: '/leaderboard',  label: 'Leaderboard',    testId: 'nav-leaderboard',  gated: true },
 ];

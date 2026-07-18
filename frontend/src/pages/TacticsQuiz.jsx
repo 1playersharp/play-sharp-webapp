@@ -7,7 +7,11 @@ import useTacticsQuizStore from '@/state/useTacticsQuizStore';
 import {
     POSITIONS,
     PROFILE_POSITION_TO_BUCKET,
+    SCENARIOS_PER_ATTEMPT,
+    MAX_WEIGHT,
+    sampleScenarios,
 } from '@/data/tacticsQuizScenarios';
+import { buildRecommendations } from '@/data/topicGameMap';
 
 import PositionSelect from '@/components/tacticsQuiz/PositionSelect';
 import ScenarioPitch, { TOTAL_MOTION_MS } from '@/components/tacticsQuiz/ScenarioPitch';
@@ -18,30 +22,38 @@ import ResultsSummary from '@/components/tacticsQuiz/ResultsSummary';
 // question so the user has a moment to actually watch the play resolve.
 const QUESTION_REVEAL_DELAY_MS = TOTAL_MOTION_MS + 500;
 
+// Best-answer weight in each option list; used to name the "stronger option"
+// in per-question feedback.
+const bestChoiceIndex = (scenario) =>
+    scenario.choices.reduce(
+        (best, c, i, arr) => (c.weight > arr[best].weight ? i : best),
+        0,
+    );
+
 const initialState = () => ({
-    stage: 'select',   // 'select' | 'quiz' | 'results'
+    stage: 'select',        // 'select' | 'quiz' | 'results'
     positionKey: null,
+    scenarios: [],          // the 4 scenarios sampled for this attempt
     scenarioIdx: 0,
-    picked: null,
-    results: [],       // [{ title, correct }]
-    replayNonce: 0,    // bumps to re-run scenario animation without unmounting
+    picked: null,           // index of picked option, or null
+    results: [],            // [{ topic, title, pickedIdx, pickedWeight, bestIdx }]
+    replayNonce: 0,
 });
 
 export default function TacticsQuiz() {
     const profilePosition = useProfileStore((s) => s.profile?.position);
-    const recordResult = useTacticsQuizStore((s) => s.recordResult);
+    const preferredTier = useProfileStore((s) => s.profile?.tier) || 'foundation';
+    const recordAttempt = useTacticsQuizStore((s) => s.recordAttempt);
     const [state, setState] = useState(initialState());
     const [questionOpen, setQuestionOpen] = useState(false);
 
     const position = state.positionKey ? POSITIONS[state.positionKey] : null;
-    const scenario = position ? position.scenarios[state.scenarioIdx] : null;
+    const scenario = state.scenarios[state.scenarioIdx] || null;
     const suggestedKey = useMemo(
         () => PROFILE_POSITION_TO_BUCKET[profilePosition] ?? null,
         [profilePosition],
     );
 
-    // Timed reveal of the question panel — mirrors the reference's ~500ms
-    // buffer after the motion settles. Also fires on replay via the nonce.
     useEffect(() => {
         if (state.stage !== 'quiz' || !scenario) return undefined;
         setQuestionOpen(false);
@@ -52,10 +64,12 @@ export default function TacticsQuiz() {
     const startPosition = (key) => {
         const p = POSITIONS[key];
         if (!p || p.comingSoon || !p.scenarios.length) return;
+        const picked = sampleScenarios(key, SCENARIOS_PER_ATTEMPT);
         setState({
             ...initialState(),
             stage: 'quiz',
             positionKey: key,
+            scenarios: picked,
         });
     };
 
@@ -67,16 +81,26 @@ export default function TacticsQuiz() {
 
     const pickAnswer = (i) => {
         if (state.picked != null) return;
-        const correct = i === scenario.correct;
+        const chosen = scenario.choices[i];
+        const bestIdx = bestChoiceIndex(scenario);
         setState((s) => ({
             ...s,
             picked: i,
-            results: [...s.results, { title: scenario.title, correct }],
+            results: [
+                ...s.results,
+                {
+                    topic: scenario.topic,
+                    title: scenario.title,
+                    pickedIdx: i,
+                    pickedWeight: chosen.weight,
+                    bestIdx,
+                },
+            ],
         }));
     };
 
     const advance = () => {
-        const isLast = state.scenarioIdx >= position.scenarios.length - 1;
+        const isLast = state.scenarioIdx >= state.scenarios.length - 1;
         if (!isLast) {
             setState((s) => ({
                 ...s,
@@ -86,11 +110,38 @@ export default function TacticsQuiz() {
             }));
             return;
         }
-        // Finalise: record + toast + show results.
-        const score = state.results.filter((r) => r.correct).length;
-        const total = position.scenarios.length;
-        recordResult(state.positionKey, score, total);
-        toast.success(`Tactics Quiz · ${position.label} · ${score}/${total}`);
+
+        // Finalise: compute weighted score + per-topic breakdown, record,
+        // then move to results.
+        const total = state.scenarios.length;
+        const maxPossible = total * MAX_WEIGHT;
+        const sumWeights = state.results.reduce((a, r) => a + r.pickedWeight, 0);
+        const scorePercent = Math.round((sumWeights / maxPossible) * 100);
+
+        const topicBreakdown = {};
+        state.results.forEach((r) => {
+            // If the same topic appears twice in one attempt, average the
+            // two picks — otherwise the breakdown would silently overwrite.
+            const prev = topicBreakdown[r.topic];
+            const val = r.pickedWeight / MAX_WEIGHT;
+            topicBreakdown[r.topic] = prev == null ? val : (prev + val) / 2;
+        });
+
+        const recommendations = buildRecommendations(topicBreakdown, {
+            preferredTier,
+        });
+
+        recordAttempt({
+            positionKey: state.positionKey,
+            scorePercent,
+            topicBreakdown,
+            recommendations,
+        });
+
+        toast.success(
+            `Tactics Quiz · ${position.label} · IQ ${scorePercent}`,
+        );
+
         setState((s) => ({ ...s, stage: 'results' }));
     };
 
@@ -115,7 +166,7 @@ export default function TacticsQuiz() {
     }
 
     if (state.stage === 'quiz' && scenario && position) {
-        const total = position.scenarios.length;
+        const total = state.scenarios.length;
         const done = state.scenarioIdx;
         return (
             <div data-testid="tactics-quiz-page" className="mx-auto max-w-4xl px-6 py-10">
@@ -142,7 +193,7 @@ export default function TacticsQuiz() {
                         Scenario {state.scenarioIdx + 1} / {total}
                     </span>
                     <div className="flex gap-1.5" data-testid="tactics-quiz-progress-dots">
-                        {position.scenarios.map((_, i) => (
+                        {state.scenarios.map((_, i) => (
                             <span
                                 key={i}
                                 aria-hidden
@@ -190,8 +241,22 @@ export default function TacticsQuiz() {
     }
 
     if (state.stage === 'results' && position) {
-        const score = state.results.filter((r) => r.correct).length;
-        const total = position.scenarios.length;
+        const total = state.scenarios.length;
+        const maxPossible = total * MAX_WEIGHT;
+        const sumWeights = state.results.reduce((a, r) => a + r.pickedWeight, 0);
+        const scorePercent = Math.round((sumWeights / maxPossible) * 100);
+
+        const topicBreakdown = {};
+        state.results.forEach((r) => {
+            const prev = topicBreakdown[r.topic];
+            const val = r.pickedWeight / MAX_WEIGHT;
+            topicBreakdown[r.topic] = prev == null ? val : (prev + val) / 2;
+        });
+
+        const recommendations = buildRecommendations(topicBreakdown, {
+            preferredTier,
+        });
+
         return (
             <div data-testid="tactics-quiz-page" className="mx-auto max-w-3xl px-6 py-10">
                 <div className="flex items-center justify-between">
@@ -211,9 +276,9 @@ export default function TacticsQuiz() {
                 <div className="mt-8">
                     <ResultsSummary
                         positionLabel={position.label}
-                        score={score}
-                        total={total}
-                        results={state.results}
+                        scorePercent={scorePercent}
+                        topicBreakdown={topicBreakdown}
+                        recommendations={recommendations}
                         onReplayPosition={() => startPosition(state.positionKey)}
                         onPickAnother={goHome}
                     />

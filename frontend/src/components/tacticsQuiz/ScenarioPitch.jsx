@@ -24,6 +24,12 @@ export default function ScenarioPitch({ scenario, nonce = 0, onReplay }) {
     const [arrowsDrawn, setArrowsDrawn] = useState(false);
     const [moved, setMoved] = useState(false);
 
+    // Newer scenarios in the position banks are text-only (no pitch
+    // choreography) — treat missing actors/ball as empty so the pitch just
+    // renders its markings without animation instead of crashing.
+    const actors = scenario.actors ?? [];
+    const ball = scenario.ball ?? null;
+
     useEffect(() => {
         setArrowsDrawn(false);
         setMoved(false);
@@ -35,7 +41,7 @@ export default function ScenarioPitch({ scenario, nonce = 0, onReplay }) {
     // Pre-compute path lengths so the stroke-dashoffset trick works.
     const trails = useMemo(() => {
         const list = [];
-        scenario.actors.forEach((a, i) => {
+        actors.forEach((a, i) => {
             if (a.x1 !== a.x2 || a.y1 !== a.y2) {
                 list.push({
                     kind: 'actor',
@@ -45,16 +51,16 @@ export default function ScenarioPitch({ scenario, nonce = 0, onReplay }) {
                 });
             }
         });
-        if (scenario.ball && (scenario.ball.x1 !== scenario.ball.x2 || scenario.ball.y1 !== scenario.ball.y2)) {
+        if (ball && (ball.x1 !== ball.x2 || ball.y1 !== ball.y2)) {
             list.push({
                 kind: 'ball',
-                x1: scenario.ball.x1, y1: scenario.ball.y1,
-                x2: scenario.ball.x2, y2: scenario.ball.y2,
-                len: Math.hypot(scenario.ball.x2 - scenario.ball.x1, scenario.ball.y2 - scenario.ball.y1),
+                x1: ball.x1, y1: ball.y1,
+                x2: ball.x2, y2: ball.y2,
+                len: Math.hypot(ball.x2 - ball.x1, ball.y2 - ball.y1),
             });
         }
         return list;
-    }, [scenario]);
+    }, [scenario, actors, ball]);
 
     return (
         <div className="relative overflow-hidden rounded-sm border border-white/10 bg-gradient-to-b from-[#0e2a1e] to-[#0a2118] p-1.5">
@@ -89,7 +95,7 @@ export default function ScenarioPitch({ scenario, nonce = 0, onReplay }) {
                 </text>
 
                 {/* Motion trails (arrows for movers, pulse rings for holders) */}
-                {scenario.actors.map((a, i) => {
+                {actors.map((a, i) => {
                     const moves = a.x1 !== a.x2 || a.y1 !== a.y2;
                     if (!moves) {
                         return (
@@ -122,12 +128,12 @@ export default function ScenarioPitch({ scenario, nonce = 0, onReplay }) {
                     );
                 })}
 
-                {scenario.ball && trails.some((t) => t.kind === 'ball') && (() => {
+                {ball && trails.some((t) => t.kind === 'ball') && (() => {
                     const t = trails.find((tt) => tt.kind === 'ball');
                     return (
                         <motion.line
-                            x1={scenario.ball.x1} y1={scenario.ball.y1}
-                            x2={scenario.ball.x2} y2={scenario.ball.y2}
+                            x1={ball.x1} y1={ball.y1}
+                            x2={ball.x2} y2={ball.y2}
                             fill="none"
                             stroke="rgba(245,243,236,0.3)"
                             strokeWidth="2.5"
@@ -141,7 +147,7 @@ export default function ScenarioPitch({ scenario, nonce = 0, onReplay }) {
                 })()}
 
                 {/* Actor tokens */}
-                {scenario.actors.map((a, i) => {
+                {actors.map((a, i) => {
                     const attack = a.role === 'attack';
                     const target = { cx: moved ? a.x2 : a.x1, cy: moved ? a.y2 : a.y1 };
                     const labelTarget = { x: moved ? a.x2 : a.x1, y: moved ? a.y2 : a.y1 };
@@ -195,14 +201,14 @@ export default function ScenarioPitch({ scenario, nonce = 0, onReplay }) {
                     );
                 })}
 
-                {scenario.ball && (
+                {ball && (
                     <motion.circle
                         r={7}
                         fill="#f5f3ec"
                         stroke="#2a1a08"
                         strokeWidth="1.5"
-                        initial={{ cx: scenario.ball.x1, cy: scenario.ball.y1 }}
-                        animate={{ cx: moved ? scenario.ball.x2 : scenario.ball.x1, cy: moved ? scenario.ball.y2 : scenario.ball.y1 }}
+                        initial={{ cx: ball.x1, cy: ball.y1 }}
+                        animate={{ cx: moved ? ball.x2 : ball.x1, cy: moved ? ball.y2 : ball.y1 }}
                         transition={{ duration: MOTION_DUR_MS / 1000, ease: easing }}
                     />
                 )}

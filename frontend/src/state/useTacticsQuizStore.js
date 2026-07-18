@@ -1,57 +1,41 @@
 import create from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// One record per position bucket. `bestScore` is the highest number of
-// correctly-answered scenarios across all attempts; `total` is the number
-// of scenarios that attempt had (so % can be recomputed if the quiz grows
-// later). `attempts` counts every finished quiz.
-const emptyResult = () => ({
-    bestScore: 0,
-    total: 0,
-    lastCompletedAt: null,
-    attempts: 0,
-});
-
-const POSITION_KEYS = ['defender', 'midfielder', 'winger', 'striker'];
-
-const buildEmptyResults = () => {
-    const out = {};
-    POSITION_KEYS.forEach((k) => { out[k] = emptyResult(); });
-    return out;
-};
-
+// Latest-attempt persistence. Retaking the quiz overwrites the previous
+// attempt everywhere it is surfaced (results screen, PlayerBanner IQ chip,
+// PositionSelect card). Only the LATEST attempt is retained.
+//
+// Attempt shape:
+//   {
+//     positionKey: 'defender' | 'midfielder' | 'winger' | 'striker',
+//     scorePercent: 0..100,           // rounded
+//     topicBreakdown: { topic: 0..1 } // per-topic pickedWeight / MAX_WEIGHT
+//     recommendations: [{ skillId, path, label, colour, topic, why }, ...],
+//     completedAt: ISO string,
+//   }
 const useTacticsQuizStore = create(
     persist(
         (set) => ({
-            results: buildEmptyResults(),
-            /**
-             * Merge a finished attempt into the store. Keeps the highest
-             * bestScore seen and stamps the completion time so a UI can show
-             * "last played 3 days ago".
-             */
-            recordResult: (positionKey, score, total) =>
-                set((state) => {
-                    if (!POSITION_KEYS.includes(positionKey)) return state;
-                    const prev = state.results[positionKey] ?? emptyResult();
-                    return {
-                        results: {
-                            ...state.results,
-                            [positionKey]: {
-                                bestScore: Math.max(prev.bestScore, score),
-                                total,
-                                lastCompletedAt: new Date().toISOString(),
-                                attempts: prev.attempts + 1,
-                            },
-                        },
-                    };
-                }),
-            reset: () => set({ results: buildEmptyResults() }),
+            latestAttempt: null,
+            recordAttempt: (attempt) =>
+                set(() => ({
+                    latestAttempt: {
+                        ...attempt,
+                        // Never persist non-serialisable pieces (icon
+                        // components) — strip them before storing.
+                        recommendations: (attempt.recommendations || []).map(
+                            ({ Icon, ...rest }) => rest,
+                        ),
+                        completedAt: new Date().toISOString(),
+                    },
+                })),
+            reset: () => set({ latestAttempt: null }),
         }),
         {
             name: 'playsharp-tactics-quiz',
-            partialize: (state) => ({ results: state.results }),
-        }
-    )
+            partialize: (state) => ({ latestAttempt: state.latestAttempt }),
+        },
+    ),
 );
 
 export default useTacticsQuizStore;

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import useProfileStore, { FOOT_OPTIONS } from '@/state/useProfileStore';
 import useDnaStore from '@/state/useDnaStore';
+import useTacticsQuizStore from '@/state/useTacticsQuizStore';
 import { useFootballIQ } from '@/state/iq';
 import useConfidenceStore, {
     rollingAverage,
@@ -21,6 +22,7 @@ export default function PlayerBanner() {
     const archetypeId = useDnaStore((s) => s.archetypeId);
     const archetype = archetypeId ? getArchetype(archetypeId) : null;
     const { overallIQ } = useFootballIQ();
+    const tacticsIQ = useTacticsQuizStore((s) => s.latestAttempt?.scorePercent ?? null);
     const confidenceCheckIns = useConfidenceStore((s) => s.checkIns);
     const confidenceAvg = rollingAverage(confidenceCheckIns, 5);
     const confidenceLabel = confidenceAvg != null ? labelForRating(confidenceAvg) : '—';
@@ -97,6 +99,27 @@ export default function PlayerBanner() {
                                 <span className="text-xs font-semibold uppercase tracking-[0.14em] text-white">
                                     {archetype.name}
                                 </span>
+                            </span>
+                        </Link>
+                    )}
+
+                    {tacticsIQ != null && (
+                        <Link
+                            to="/tactics-quiz"
+                            data-testid="player-banner-tactics-iq"
+                            title={`Position IQ — from your last Tactics Quiz attempt (${tacticsIQ})`}
+                            className="inline-flex shrink-0 items-center gap-2 rounded-sm border border-ps-red/40 bg-ps-red/10 px-2 py-1.5 transition hover:bg-ps-red/20 sm:px-3"
+                        >
+                            <span className="hidden flex-col leading-tight sm:flex">
+                                <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-ps-red">
+                                    IQ
+                                </span>
+                                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-white">
+                                    {tacticsIQ}
+                                </span>
+                            </span>
+                            <span className="text-base font-bold text-ps-red sm:hidden" aria-label={`Position IQ ${tacticsIQ}`}>
+                                {tacticsIQ}
                             </span>
                         </Link>
                     )}

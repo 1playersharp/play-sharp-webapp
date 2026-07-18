@@ -4,11 +4,11 @@ import useTacticsQuizStore from '@/state/useTacticsQuizStore';
 
 /**
  * Grid of position cards, one per Tactics Quiz bucket. Goalkeeper is
- * rendered as a "coming soon" stub. If the user has already played a
- * bucket, its card shows their best score.
+ * rendered as a "coming soon" stub. If the player has a stored latest
+ * attempt for the bucket, its card shows their last IQ score.
  */
 export default function PositionSelect({ suggestedKey, onPick }) {
-    const results = useTacticsQuizStore((s) => s.results);
+    const latestAttempt = useTacticsQuizStore((s) => s.latestAttempt);
 
     return (
         <div
@@ -17,8 +17,8 @@ export default function PositionSelect({ suggestedKey, onPick }) {
         >
             {POSITION_ORDER.map((key) => {
                 const p = POSITIONS[key];
-                const record = results?.[key];
-                const played = record?.attempts > 0;
+                const hasLastForThis =
+                    latestAttempt && latestAttempt.positionKey === key;
                 const isSuggested = suggestedKey === key;
                 if (p.comingSoon) {
                     return (
@@ -68,14 +68,14 @@ export default function PositionSelect({ suggestedKey, onPick }) {
                         <p className="mt-2 text-sm leading-relaxed text-white/70">{p.desc}</p>
                         <div className="mt-4 flex items-center justify-between">
                             <span className="text-xs uppercase tracking-widest text-white/45">
-                                {p.scenarios.length} scenarios
+                                4 of {p.scenarios.length} scenarios
                             </span>
-                            {played && (
+                            {hasLastForThis && (
                                 <span
                                     data-testid={`tactics-quiz-best-${key}`}
                                     className="text-xs font-mono text-white/70"
                                 >
-                                    Best <strong className="text-white">{record.bestScore}</strong> / {record.total || p.scenarios.length}
+                                    Last IQ <strong className="text-white">{latestAttempt.scorePercent}</strong>
                                 </span>
                             )}
                         </div>
