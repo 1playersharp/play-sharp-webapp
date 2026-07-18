@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import useProfileStore, {
     POSITIONS,
@@ -7,7 +7,7 @@ import useProfileStore, {
     isProfileComplete,
     missingProfileFields,
 } from '@/state/useProfileStore';
-import { useFootballIQ } from '@/state/iq';
+import useDnaStore from '@/state/useDnaStore';
 import {
     PRESET_AVATARS,
     PresetTile,
@@ -25,8 +25,9 @@ export default function Profile() {
     const profile = useProfileStore((s) => s.profile);
     const setProfile = useProfileStore((s) => s.setProfile);
     const resetProfile = useProfileStore((s) => s.resetProfile);
-    const { foundationIQ, eliteIQ, overallIQ } = useFootballIQ();
+    const dnaArchetypeId = useDnaStore((s) => s.archetypeId);
     const location = useLocation();
+    const navigate = useNavigate();
 
     const [draft, setDraft] = useState(profile);
     const fileInputRef = useRef(null);
@@ -57,6 +58,12 @@ export default function Profile() {
     const commit = () => {
         setProfile(draft);
         toast.success('Profile updated');
+        // First time completing (or updating) a profile with no DNA yet —
+        // send them into the DNA assessment. Editing an already-DNA'd
+        // profile keeps the user on the Profile page.
+        if (isProfileComplete(draft) && !dnaArchetypeId) {
+            navigate('/dna');
+        }
     };
 
     const discard = () => setDraft(profile);
@@ -93,8 +100,8 @@ export default function Profile() {
                     </p>
                     <p className="mt-1 text-sm text-white/70">
                         Save your name, position, team and preferred foot to
-                        access Schedule, Objectives, Training Games, Video Upload
-                        and Leaderboard.
+                        access Schedule, Objectives, Training Games, Tactics
+                        Quiz, Video Upload and Leaderboard.
                     </p>
                     {missing.length > 0 && (
                         <ul className="mt-3 flex flex-wrap gap-2">
@@ -111,10 +118,10 @@ export default function Profile() {
                 </div>
             )}
 
-            <div className="mt-8 grid gap-6 md:grid-cols-3">
+            <div className="mt-8">
                 <div
                     data-testid="profile-edit"
-                    className="ps-card p-6 md:col-span-2"
+                    className="ps-card p-6"
                 >
                     <div className="flex items-baseline justify-between">
                         <p className="ps-label">Edit Profile</p>
@@ -275,22 +282,6 @@ export default function Profile() {
                             Reset profile
                         </button>
                     </div>
-                </div>
-
-                <div
-                    data-testid="profile-football-iq"
-                    className="ps-card p-6"
-                >
-                    <p className="ps-label">Football IQ</p>
-                    <div className="mt-2 text-5xl font-bold text-ps-turf">
-                        {overallIQ || '—'}
-                    </div>
-                    <p className="mt-2 text-xs text-white/60">
-                        Foundation IQ: {foundationIQ} · Elite IQ: {eliteIQ}
-                    </p>
-                    <p className="mt-1 text-xs text-white/45">
-                        Foundation contributes 70% and Elite contributes 30%.
-                    </p>
                 </div>
             </div>
         </div>

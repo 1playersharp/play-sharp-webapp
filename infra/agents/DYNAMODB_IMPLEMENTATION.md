@@ -53,7 +53,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Hook to get or generate a stable player ID.
- * Persists to localStorage so returning players use the same ID.
+ * Persists to localStorage so returning player-models use the same ID.
  * Solves: name/club spelling variations, duplicate records, player tracking.
  */
 export function usePlayerId() {
@@ -470,7 +470,7 @@ def migrate():
     with open("scores_export.json") as f:
         scores = json.load(f)
     
-    # Generate stable UUIDs for unique players (name+club combos)
+    # Generate stable UUIDs for unique player-models (name+club combos)
     player_map = {}  # {(name, club): uuid}
     
     # Group by game_type and player, keep only best score

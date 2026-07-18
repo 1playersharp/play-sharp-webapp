@@ -1,10 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { format, startOfWeek, addWeeks, addDays } from 'date-fns';
 import useScheduleStore, {
     SLOTS,
     ACTIVITY_TYPES,
     activityTypeMeta,
 } from '@/state/useScheduleStore';
+import useConfidenceStore, {
+    findCheckInForMatch,
+} from '@/state/useConfidenceStore';
+import { RATING_META } from '@/confidence/data';
+import { nextMatchWithin24h } from '@/confidence/scheduleHelpers';
+import CheckInModal from '@/confidence/CheckInModal';
+import MatchRoutineModal from '@/confidence/MatchRoutineModal';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -28,6 +35,7 @@ export default function Schedule() {
     const weeks = useScheduleStore((s) => s.weeks);
     const addActivity = useScheduleStore((s) => s.addActivity);
     const removeActivity = useScheduleStore((s) => s.removeActivity);
+    const checkIns = useConfidenceStore((s) => s.checkIns);
 
     const [weekStart, setWeekStart] = useState(() =>
         startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -39,11 +47,20 @@ export default function Schedule() {
         note: '',
         time: '',
     });
+    const [openCheckIn, setOpenCheckIn] = useState(null);   // { entry, existing }
+    const [openRoutine, setOpenRoutine] = useState(null);   // entry
 
     const weekISO = toISODate(weekStart);
     const weekData = weeks[weekISO] || {};
     const weekEnd = addDays(weekStart, 6);
     const rangeLabel = `${format(weekStart, 'EEE d')} – ${format(weekEnd, 'EEE d LLL')}`;
+
+    const upcomingMatch = useMemo(() => nextMatchWithin24h(weeks), [weeks]);
+    const todayStart = useMemo(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, []);
 
     const openAdd = (day, slot) => {
         setAdding({ day, slot });
@@ -108,9 +125,31 @@ export default function Schedule() {
                 </div>
             </div>
 
+            {upcomingMatch && (
+                <button
+                    type="button"
+                    data-testid="schedule-match-routine"
+                    onClick={() => setOpenRoutine(upcomingMatch)}
+                    className="mt-6 flex w-full items-center justify-between gap-4 rounded-sm border border-ps-gold/50 bg-ps-gold/10 px-4 py-3 text-left transition hover:border-ps-gold hover:bg-ps-gold/20"
+                >
+                    <span className="min-w-0">
+                        <span className="block text-[10px] font-bold uppercase tracking-[0.22em] text-ps-gold">
+                            Match within 24 hours
+                        </span>
+                        <span className="mt-1 block truncate text-sm font-semibold text-white">
+                            {upcomingMatch.activity.title || 'Match'} · {format(upcomingMatch.date, 'EEE d LLL')}
+                        </span>
+                    </span>
+                    <span className="shrink-0 text-xs font-bold uppercase tracking-[0.18em] text-white">
+                        Match day routine →
+                    </span>
+                </button>
+            )}
+
             <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-7">
                 {DAY_LABELS.map((label, day) => {
                     const date = addDays(weekStart, day);
+                    const isPast = date < todayStart;
                     const dayData = weekData[day] || emptySlot();
                     return (
                         <div
@@ -145,6 +184,12 @@ export default function Schedule() {
                                             dayData[slot].map((a) => {
                                                 const meta = activityTypeMeta(a.type);
                                                 const hex = ACCENT_HEX[meta.accent] || '#DC1E28';
+                                                const isMatch = a.type === 'match';
+                                                const record = isMatch
+                                                    ? findCheckInForMatch(checkIns, a.id)
+                                                    : null;
+                                                const rated = record && record.rating != null;
+                                                const showPrompt = isMatch && !rated;
                                                 return (
                                                     <li
                                                         key={a.id}
@@ -173,6 +218,49 @@ export default function Schedule() {
                                                                     <p className="mt-1 text-[11px] text-white/55">
                                                                         {a.note}
                                                                     </p>
+                                                                )}
+
+                                                                {showPrompt && (
+                                                                    <button
+                                                                        type="button"
+                                                                        data-testid={`schedule-check-in-open-${a.id}`}
+                                                                        onClick={() =>
+                                                                            setOpenCheckIn({
+                                                                                entry: { weekISO, dayIndex: day, slot, activity: a, date },
+                                                                            })
+                                                                        }
+                                                                        className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-ps-turf hover:text-white"
+                                                                    >
+                                                                        Rate confidence →
+                                                                    </button>
+                                                                )}
+                                                                {rated && (
+                                                                    <button
+                                                                        type="button"
+                                                                        data-testid={`schedule-check-in-edit-${a.id}`}
+                                                                        onClick={() =>
+                                                                            setOpenCheckIn({
+                                                                                entry: { weekISO, dayIndex: day, slot, activity: a, date },
+                                                                            })
+                                                                        }
+                                                                        className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] hover:text-white"
+                                                                        style={{
+                                                                            color: RATING_META[record.rating]?.tone,
+                                                                        }}
+                                                                        title={`Confidence: ${RATING_META[record.rating]?.label}`}
+                                                                    >
+                                                                        <span
+                                                                            className="grid h-4 w-4 place-items-center rounded-sm text-[9px] font-bold"
+                                                                            style={{
+                                                                                backgroundColor: `${RATING_META[record.rating]?.tone}22`,
+                                                                                color: RATING_META[record.rating]?.tone,
+                                                                                border: `1px solid ${RATING_META[record.rating]?.tone}55`,
+                                                                            }}
+                                                                        >
+                                                                            {record.rating}
+                                                                        </span>
+                                                                        {RATING_META[record.rating]?.short}
+                                                                    </button>
                                                                 )}
                                                             </div>
                                                             <button
@@ -288,6 +376,19 @@ export default function Schedule() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {openCheckIn && (
+                <CheckInModal
+                    entry={openCheckIn.entry}
+                    onClose={() => setOpenCheckIn(null)}
+                />
+            )}
+            {openRoutine && (
+                <MatchRoutineModal
+                    entry={openRoutine}
+                    onClose={() => setOpenRoutine(null)}
+                />
             )}
         </div>
     );

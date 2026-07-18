@@ -1125,7 +1125,7 @@ function PitchCanvas({ scenario, passKey, chosenPassIdx, moveIdx, onPassDecide, 
       const getRing=(p)=>{
         if(p.isUser) return null;
         if(inPassPhase){
-          // highlight players who are pass targets
+          // highlight player-models who are pass targets
           const decIdx=scenario.decisions.findIndex(d=>d.targetPlayerId===p.id);
           return decIdx>=0 ? DEC_COLS[decIdx] : null;
         }
@@ -1452,6 +1452,17 @@ export default function TacticalIQ({ onComplete }) {
         {(gamePhase==="moveAnim"||showFeedback)&&"Movement complete — coaching feedback below"}
       </div>
 
+      {/* Scan requirement docked ABOVE the pitch. Small centre-strip; keeps
+          the pitch itself clear during motion (rule: no instructional
+          overlay on the play area while in motion). */}
+      {gamePhase==="pass" && (
+        <div style={{padding:"6px 20px 0",display:"flex",justifyContent:"center"}}>
+          <div style={{background:"rgba(4,8,16,0.88)",border:"1px solid rgba(200,240,32,0.35)",borderRadius:3,padding:"5px 14px",fontFamily:"'IBM Plex Mono',monospace",fontSize:8.5,color:"#c8f020",letterSpacing:".08em",textTransform:"uppercase",whiteSpace:"nowrap"}}>
+            ⊙ {sc.scanRequirement}
+          </div>
+        </div>
+      )}
+
       <div className="tiq-pitch">
         <PitchCanvas
           scenario={sc}
@@ -1464,20 +1475,22 @@ export default function TacticalIQ({ onComplete }) {
           onPassAnimDone={handlePassAnimDone}
         />
 
-        {gamePhase==="pass"&&<div className="tiq-scan">⊙ {sc.scanRequirement}</div>}
-        {gamePhase==="pass"&&<div className="tiq-hint">⬆ Click a coloured PASS arrow on the pitch — A, B or C</div>}
-        {gamePhase==="move"&&<div className="tiq-hint">⬆ Click a MOVE zone on the pitch — choose where to run after passing</div>}
-
         {showFeedback&&passDecIdx!==null&&(
           <FeedbackPanel scenario={sc} passDecIdx={passDecIdx} moveDecIdx={moveDecIdx} onNext={handleNext}/>
         )}
-
-        {(gamePhase==="animating"||gamePhase==="moveAnim")&&!showFeedback&&(
-          <div style={{position:"absolute",bottom:14,left:"50%",transform:"translateX(-50%)",background:"rgba(4,8,16,0.88)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:3,padding:"5px 14px",fontFamily:"'IBM Plex Mono',monospace",fontSize:8.5,color:T.muted,letterSpacing:"0.08em",pointerEvents:"none",animation:"pulse 1.2s ease-in-out infinite"}}>
-            Analysing movement…
-          </div>
-        )}
       </div>
+
+      {/* Hint + analysing status docked BELOW the pitch — no longer
+          absolutely positioned over the play area during motion. */}
+      {(gamePhase==="pass" || gamePhase==="move" || ((gamePhase==="animating"||gamePhase==="moveAnim")&&!showFeedback)) && (
+        <div style={{padding:"6px 20px",display:"flex",justifyContent:"center"}}>
+          <div style={{background:"rgba(4,8,16,0.88)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:3,padding:"5px 14px",fontFamily:"'IBM Plex Mono',monospace",fontSize:8.5,color:T.muted,letterSpacing:"0.08em",whiteSpace:"nowrap",animation:(gamePhase==="animating"||gamePhase==="moveAnim")?"pulse 1.2s ease-in-out infinite":undefined}}>
+            {gamePhase==="pass" && "⬆ Click a coloured PASS arrow on the pitch — A, B or C"}
+            {gamePhase==="move" && "⬆ Click a MOVE zone on the pitch — choose where to run after passing"}
+            {(gamePhase==="animating"||gamePhase==="moveAnim")&&!showFeedback && "Analysing movement…"}
+          </div>
+        </div>
+      )}
 
       {/* Pass phase decision cards */}
       {gamePhase==="pass"&&(

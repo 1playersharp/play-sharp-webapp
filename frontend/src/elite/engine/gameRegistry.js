@@ -27,7 +27,7 @@ export const GAME_REGISTRY = {
     scanning: {
         label: 'Scanning', Icon: Eye, colour: 'text-ps-redDeep',
         foundation: { Cmp: ScanningGame },
-        elite: null,
+        elite: { path: '/elite/games/scanning', description: 'Check your shoulders, build the picture, receive on the half-turn' },
     },
     pressing: {
         label: 'Pressing', Icon: Shield, colour: 'text-ps-turf',
@@ -94,14 +94,20 @@ export const DEMO_PLAYABLE = {
     GK: [{ id: 'reaction' },                     { id: 'scanning' }],
     CB: [{ id: 'pressing', tier: 'elite' },      { id: 'decision' }],
     FB: [{ id: 'pressing', tier: 'elite' },      { id: 'decision', tier: 'elite' }],
-    DM: [{ id: 'movement', tier: 'elite' },      { id: 'body_shape' }],
-    CM: [{ id: 'movement', tier: 'elite' },      { id: 'body_shape' }],
-    AM: [{ id: 'movement', tier: 'elite' },      { id: 'positioning' }],
+    // NOTE: DM/CM/AM intentionally carry THREE playable games instead of the
+    // usual two — 'scanning' is the highest-value midfield objective and the
+    // rigged-player scanning game was built specifically for these positions.
+    // Breaks the "exactly 2 per position" rule; kept explicit for review.
+    DM: [{ id: 'movement', tier: 'elite' },      { id: 'body_shape' },      { id: 'scanning', tier: 'elite' }],
+    CM: [{ id: 'movement', tier: 'elite' },      { id: 'body_shape' },      { id: 'scanning', tier: 'elite' }],
+    AM: [{ id: 'movement', tier: 'elite' },      { id: 'positioning' },     { id: 'scanning', tier: 'elite' }],
     W:  [{ id: 'striker' },                      { id: 'crossing' }],
     ST: [{ id: 'body_shape' },                   { id: 'striker' }],
 };
 
-/** The two COMING-SOON placeholders per position — greyed, non-interactive, NOT built. Labels are display-only. */
+// Roadmap teasers — intentionally not rendered for now; revive when the
+// games ship. Kept intact so bringing them back is a one-line change in
+// pages/IQTraining.jsx.
 export const COMING_SOON = {
     GK: [{ id: 'gk_distribution',    label: 'Distribution' },      { id: 'gk_command_area',     label: 'Command of the area' }],
     CB: [{ id: 'cb_heading',         label: 'Defensive heading' }, { id: 'cb_tackling',         label: 'When to tackle' }],

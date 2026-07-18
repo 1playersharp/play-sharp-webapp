@@ -3,7 +3,7 @@
  *
  * Each scenario:
  *   id, title
- *   opponents: [{ id, pos }]           — 3..5 opposition players cycling the ball
+ *   opponents: [{ id, pos }]           — 3..5 opposition player-models cycling the ball
  *   passSequence: [[fromIdx, toIdx]]   — order of passes (indices into opponents)
  *   pressers:   [{ id, pos }]          — 4 pressing teammates (always 4)
  *   targetPassIndex: number            — which pass in the sequence is the press window

@@ -69,10 +69,9 @@ export default function Hero() {
                         transition={{ duration: 0.5, delay: 0.15 }}
                         className="mt-8 max-w-2xl font-body text-base leading-relaxed text-white/70 md:text-lg"
                     >
-                        The browser-based cognitive training platform for modern
-                        football clubs, academies, and schools. Short, measurable
-                        drills that sharpen reaction speed, scanning, and decision
-                        making — straight from the warm-up room.
+                        See the pass before it opens. React before the ball moves.
+                        PlaySharp is short, focused drills that train your football
+                        brain — so on the pitch, you're already a step ahead.
                     </motion.p>
 
                     <motion.div
@@ -121,6 +120,68 @@ export default function Hero() {
                                 &lt;60<span className="text-ps-turf">s</span>
                             </div>
                             <div className="ps-label mt-1">To Understand</div>
+                        </div>
+                    </motion.div>
+
+                    {/* Mobile / tablet stat card. The desktop version lives in
+                        the lg:col-span-4 right column below; this is its
+                        phone-native equivalent so mobile users see the same
+                        "sample session" moment. */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.5 }}
+                        className="mt-10 lg:hidden"
+                        aria-hidden="true"
+                    >
+                        <div className="relative bg-ps-ink text-white">
+                            <div className="flex items-center justify-between bg-ps-red px-4 py-2">
+                                <span className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white">
+                                    Sample Session
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-widest text-white">
+                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                                    LIVE
+                                </span>
+                            </div>
+                            <div className="px-4 pb-4 pt-4">
+                                <div className="grid grid-cols-2 gap-px bg-white/10">
+                                    <div className="bg-ps-ink p-3">
+                                        <div className="ps-label">Reaction</div>
+                                        <div className="ps-metric mt-1 text-xl text-ps-red">
+                                            238ms
+                                        </div>
+                                    </div>
+                                    <div className="bg-ps-ink p-3">
+                                        <div className="ps-label">Decisions</div>
+                                        <div className="ps-metric mt-1 text-xl text-white">
+                                            87%
+                                        </div>
+                                    </div>
+                                    <div className="bg-ps-ink p-3">
+                                        <div className="ps-label">Scan Rate</div>
+                                        <div className="ps-metric mt-1 text-xl text-ps-turf">
+                                            4.2/s
+                                        </div>
+                                    </div>
+                                    <div className="bg-ps-ink p-3">
+                                        <div className="ps-label">PlaySharp IQ</div>
+                                        <div className="ps-metric mt-1 text-xl text-white">
+                                            912
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between text-[9px] uppercase tracking-widest">
+                                    <span className="text-white/50">Session 4 · Week 12</span>
+                                    <span className="flex items-center gap-1 text-ps-turf">
+                                        <Trophy size={9} /> +18 IQ
+                                    </span>
+                                </div>
+                                <div className="mt-2 flex h-1 overflow-hidden bg-white/8">
+                                    <div className="h-full w-[78%] bg-ps-red" />
+                                    <div className="h-full w-[10%] bg-ps-turf" />
+                                </div>
+                            </div>
                         </div>
                     </motion.div>
                 </div>
@@ -180,7 +241,7 @@ export default function Hero() {
                                     </div>
                                 </div>
                                 <div className="bg-ps-ink p-4">
-                                    <div className="ps-label">Football IQ</div>
+                                    <div className="ps-label">PlaySharp IQ</div>
                                     <div className="ps-metric mt-2 text-2xl text-white">
                                         912
                                     </div>

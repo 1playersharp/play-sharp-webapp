@@ -5,7 +5,29 @@ import { Mail, MapPin, Send, Loader2 } from "lucide-react";
 
 const initial = { name: "", email: "", club: "", message: "" };
 
+const CONTACT_EMAIL = "1player.sharp@gmail.com";
+
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+// Compose a mailto: URL with the form contents prefilled — used as a
+// fallback when the backend contact endpoint isn't reachable, so the Send
+// Message button always ends in a real send path for the user.
+const buildMailtoUrl = ({ name, email, club, message }) => {
+    const subject = `PlaySharp contact — ${name}${club ? ` (${club})` : ""}`;
+    const body = [
+        message,
+        "",
+        "---",
+        `From: ${name}`,
+        `Email: ${email}`,
+        club ? `Club: ${club}` : null,
+    ]
+        .filter((line) => line !== null)
+        .join("\n");
+    return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
+        subject
+    )}&body=${encodeURIComponent(body)}`;
+};
 
 export default function Contact() {
     const [form, setForm] = useState(initial);
@@ -28,22 +50,25 @@ export default function Contact() {
         }
 
         setSubmitting(true);
+        const payload = {
+            name: form.name.trim(),
+            email: form.email.trim(),
+            message: form.message.trim(),
+            ...(form.club.trim() ? { club: form.club.trim() } : {}),
+        };
         try {
-            const payload = {
-                name: form.name.trim(),
-                email: form.email.trim(),
-                message: form.message.trim(),
-                ...(form.club.trim() ? { club: form.club.trim() } : {}),
-            };
             await submitContact(payload);
             toast.success("Message received — we'll be in touch shortly.");
             setForm(initial);
             setSubmitted(true);
-        } catch (err) {
-            const detail =
-                err?.response?.data?.detail ||
-                "Something went wrong. Please try again.";
-            toast.error(typeof detail === "string" ? detail : "Submission failed");
+        } catch {
+            // Backend unreachable / not configured — fall back to opening the
+            // user's mail client with the message prefilled, so the Send
+            // Message button always leads to a real send path.
+            window.location.href = buildMailtoUrl(payload);
+            toast.success("Opening your mail app to send the message.");
+            setForm(initial);
+            setSubmitted(true);
         } finally {
             setSubmitting(false);
         }
@@ -73,9 +98,12 @@ export default function Contact() {
                                     </div>
                                     <div>
                                         <p className="ps-label">Email</p>
-                                        <p className="mt-1 font-body text-sm text-white/80">
-                                            1player.sharp@gmail.com
-                                        </p>
+                                        <a
+                                            href={`mailto:${CONTACT_EMAIL}`}
+                                            className="mt-1 block font-body text-sm text-white/80 hover:text-white"
+                                        >
+                                            {CONTACT_EMAIL}
+                                        </a>
                                     </div>
                                 </div>
                                 <div className="ps-card flex items-start gap-4 p-5">

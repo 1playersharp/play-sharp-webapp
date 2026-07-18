@@ -1,5 +1,10 @@
 import create from 'zustand';
 import { persist } from 'zustand/middleware';
+import { addDays, format } from 'date-fns';
+import {
+  onMatchCreated,
+  onMatchRemoved,
+} from './syncMatchArtifacts';
 
 export const SLOTS = ['AM', 'PM', 'EVE'];
 
@@ -33,18 +38,23 @@ const genId = () =>
     ? crypto.randomUUID()
     : `a_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+// weekStartISO is a Mon YYYY-MM-DD. Resolve an activity's actual date.
+const activityDateISO = (weekStartISO, dayIndex) =>
+  format(addDays(new Date(`${weekStartISO}T00:00:00`), dayIndex), 'yyyy-MM-dd');
+
 const useScheduleStore = create(
   persist(
-    (set) => ({
+    (set, _get) => ({
       weeks: {},
-      addActivity: (weekStartISO, dayIndex, slot, activity) =>
+      addActivity: (weekStartISO, dayIndex, slot, activity) => {
+        const id = genId();
         set((state) => {
           const weeks = ensureWeek(state.weeks, weekStartISO);
           const week = weeks[weekStartISO];
           const day = week[dayIndex];
           const next = {
             ...day,
-            [slot]: [...day[slot], { id: genId(), ...activity }],
+            [slot]: [...day[slot], { id, ...activity }],
           };
           return {
             weeks: {
@@ -52,8 +62,21 @@ const useScheduleStore = create(
               [weekStartISO]: { ...week, [dayIndex]: next },
             },
           };
-        }),
-      updateActivity: (weekStartISO, dayIndex, slot, id, patch) =>
+        });
+        // Post-commit: spawn match artifacts if this was a match.
+        if (activity?.type === 'match') {
+          onMatchCreated({
+            activityId: id,
+            dateISO: activityDateISO(weekStartISO, dayIndex),
+            title: activity.title,
+          });
+        }
+      },
+      updateActivity: (weekStartISO, dayIndex, slot, id, patch) => {
+        // Capture pre-change activity so we can detect a type flip.
+        const preState = _get();
+        const preWeek = preState.weeks[weekStartISO];
+        const oldActivity = preWeek?.[dayIndex]?.[slot]?.find((a) => a.id === id);
         set((state) => {
           const week = state.weeks[weekStartISO];
           if (!week) return {};
@@ -68,8 +91,27 @@ const useScheduleStore = create(
               [weekStartISO]: { ...week, [dayIndex]: next },
             },
           };
-        }),
-      removeActivity: (weekStartISO, dayIndex, slot, id) =>
+        });
+        // Post-commit: react to type flips only.
+        if (!oldActivity) return;
+        const newActivity = { ...oldActivity, ...patch };
+        const wasMatch = oldActivity.type === 'match';
+        const isMatch = newActivity.type === 'match';
+        if (!wasMatch && isMatch) {
+          onMatchCreated({
+            activityId: id,
+            dateISO: activityDateISO(weekStartISO, dayIndex),
+            title: newActivity.title,
+          });
+        } else if (wasMatch && !isMatch) {
+          onMatchRemoved(id);
+        }
+      },
+      removeActivity: (weekStartISO, dayIndex, slot, id) => {
+        // Capture the activity's type before we drop it from state.
+        const preState = _get();
+        const preWeek = preState.weeks[weekStartISO];
+        const removed = preWeek?.[dayIndex]?.[slot]?.find((a) => a.id === id);
         set((state) => {
           const week = state.weeks[weekStartISO];
           if (!week) return {};
@@ -84,7 +126,11 @@ const useScheduleStore = create(
               [weekStartISO]: { ...week, [dayIndex]: next },
             },
           };
-        }),
+        });
+        if (removed?.type === 'match') {
+          onMatchRemoved(id);
+        }
+      },
     }),
     {
       name: 'playsharp-schedule',

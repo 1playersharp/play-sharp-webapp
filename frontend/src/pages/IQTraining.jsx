@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Lock } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import useEliteStore from '@/elite/engine/useEliteStore';
@@ -11,7 +11,6 @@ import { submitScore } from '@/services/api';
 import {
     POSITIONS,
     DEMO_PLAYABLE,
-    COMING_SOON,
     resolveGame,
 } from '@/elite/engine/gameRegistry';
 
@@ -69,6 +68,7 @@ export default function IQTraining() {
     const elitePressingResult    = useEliteStore((s) => s.elitePressingResult);
     const eliteBodyShapeResult   = useEliteStore((s) => s.eliteBodyShapeResult);
     const eliteStrikerResult     = useEliteStore((s) => s.eliteStrikerResult);
+    const eliteScanningResult    = useEliteStore((s) => s.eliteScanningResult);
     const elitePositioningResult = useEliteStore((s) => s.elitePositioningResult);
     const eliteCrossingResult    = useEliteStore((s) => s.eliteCrossingResult);
 
@@ -86,6 +86,7 @@ export default function IQTraining() {
             pressing:    elitePressingResult,
             body_shape:  eliteBodyShapeResult,
             striker:     eliteStrikerResult,
+            scanning:    eliteScanningResult,
             positioning: elitePositioningResult,
             crossing:    eliteCrossingResult,
         },
@@ -166,7 +167,6 @@ export default function IQTraining() {
                     const playable = (DEMO_PLAYABLE[pos] || [])
                         .map(({ id, tier }) => resolveGame(id, tier || preferredTier))
                         .filter(Boolean);
-                    const comingSoon = COMING_SOON[pos] || [];
 
                     return (
                         <div key={pos} data-testid={`iq-training-position-${pos}`}>
@@ -249,23 +249,6 @@ export default function IQTraining() {
                                             </button>
                                         );
                                     })}
-
-                                    {comingSoon.map((cs) => (
-                                        <div
-                                            key={cs.id}
-                                            data-testid={`iq-training-coming-soon-${pos}-${cs.id}`}
-                                            aria-disabled="true"
-                                            className="ps-card cursor-not-allowed p-6 opacity-40"
-                                        >
-                                            <Lock className="text-white/50" />
-                                            <h3 className="mt-3 font-bold uppercase text-white/70">
-                                                {cs.label}
-                                            </h3>
-                                            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/45">
-                                                Coming soon
-                                            </p>
-                                        </div>
-                                    ))}
                                 </div>
                             )}
                         </div>

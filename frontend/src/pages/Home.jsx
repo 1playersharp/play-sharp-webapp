@@ -11,8 +11,11 @@ export default function Home() {
         <div data-testid="home-page">
             <Hero />
             <ProductExplainer />
-            <AudienceCards />
             <DemoPreview />
+            {/* Audience router (Players / Coaches / Clubs / Schools) moved
+                below the player-facing feature demos so the top of the page
+                stays player-first. */}
+            <AudienceCards />
 
         {/* AI Match Analysis CTA */}
         <section className="border-b border-white/10">
@@ -30,19 +33,13 @@ export default function Home() {
                         decision-making, tempo control, and off-ball intelligence.
                     </p>
 
-                    <div className="mt-8 flex justify-center gap-4">
-                        <Link to="/match-report">
-                            <button className="ps-btn-secondary">
-                                 Upload Match
-                            </button>
-                        </Link>
-
+                    <div className="mt-8 flex justify-center">
                         <Link to="/match-report">
                             <button className="ps-btn-primary">
                                 View Example Report
                             </button>
-                        </Link>     
-            </div>
+                        </Link>
+                    </div>
         </div>
 
         {/* Mini preview cards */}

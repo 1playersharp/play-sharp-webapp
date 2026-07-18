@@ -67,8 +67,8 @@ const KEEPER_REPOSITION_RATE = 1.1; // how briskly the keeper re-shades across g
 const FALLBACK_TARGET_KEY = 'NL';
 
 // ---------- Age-appropriate timing (mirrors the pattern used in the other
-// Elite games: younger players get more time / more forgiving windows,
-// older/academy-age players are held to tighter, more realistic timing). ----------
+// Elite games: younger player-models get more time / more forgiving windows,
+// older/academy-age player-models are held to tighter, more realistic timing). ----------
 
 // Total time allowed to pick a finish once targets appear.
 function getShotWindowMs(age) {
@@ -88,7 +88,7 @@ function getTouchWindowMs(age) {
 }
 
 // How forgiving the "timing of the strike" scoring curve is — larger
-// tolerance for younger players, tighter (more exacting) for older ones.
+// tolerance for younger player-models, tighter (more exacting) for older ones.
 function getTimingToleranceMs(age) {
   const a = Number(age) || 0;
   if (!a || a < 11) return 1200;

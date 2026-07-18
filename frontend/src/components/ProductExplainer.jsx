@@ -17,7 +17,7 @@ const PILLARS = [
         Icon: Eye,
         label: "Measurable Performance",
         title: "Numbers a coach can use.",
-        copy: "Track reaction in milliseconds, decision accuracy %, and football IQ over time — per player, per squad, per club.",
+        copy: "Track reaction in milliseconds, decision accuracy %, and PlaySharp IQ over time — per player, per squad, per club.",
     },
 ];
 

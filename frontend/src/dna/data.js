@@ -98,7 +98,7 @@ export const QUESTIONS = [
         options: [
             { id: 'a', label: 'Play the through-ball',                 awards: ['creativity', 'confidence'] },
             { id: 'b', label: 'Play the safer pass',                   awards: ['decisionMaking', 'composure'] },
-            { id: 'c', label: 'Delay a beat and scan again',           awards: ['vision', 'gameIntelligence'] },
+            { id: 'c', label: 'Delay and scan again',                  awards: ['vision', 'gameIntelligence'] },
             { id: 'd', label: 'Drive at goal myself',                  awards: ['competitiveness', 'confidence'] },
         ],
     },

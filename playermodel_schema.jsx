@@ -16,7 +16,7 @@ function DecisionGame3DScene({ players, pressurePoints, passingLanes, cameraConf
         " *\n" +
         " * Design decisions baked in here (from the product discussion):\n" +
         " *  - The PLAYER is the atomic unit. Coach/team pages are just aggregations\n" +
-        " *    over many players — they never own or mutate a player's plan.\n" +
+        " *    over many player-models — they never own or mutate a player's plan.\n" +
         " *  - OBJECTIVES are the connective tissue. gameScores AND matchMetrics both\n" +
         " *    carry an `objectiveId`, which is what makes the \"trained in-app vs proven\n" +
         " *    on the pitch\" transfer loop queryable.\n" +
@@ -1725,7 +1725,7 @@ function PitchCanvas({ scenario, passKey, chosenPassIdx, moveIdx, onPassDecide, 
       const getRing=(p)=>{
         if(p.isUser) return null;
         if(inPassPhase){
-          // highlight players who are pass targets
+          // highlight player-models who are pass targets
           const decIdx=scenario.decisions.findIndex(d=>d.targetPlayerId===p.id);
           return decIdx>=0 ? DEC_COLS[decIdx] : null;
         }

@@ -16,6 +16,7 @@ import Schedule from "@/pages/Schedule";
 import Objectives from "@/pages/Objectives";
 import IQTraining from "@/pages/IQTraining";
 import PlaySharpDNA from "@/pages/PlaySharpDNA";
+import TacticsQuiz from "@/pages/TacticsQuiz";
 import React, { Suspense, lazy } from 'react';
 import OrientationGate from '@/elite/ui/OrientationGate.jsx';
 
@@ -25,6 +26,7 @@ const PressingGame3D = lazy(() => import('@/elite/games/PressingGame3D.jsx'));
 const MovementGame3D = lazy(() => import('@/elite/games/MovementGame3D.jsx'));
 const BodyShapeGame3D = lazy(() => import('@/elite/games/BodyShapeGame3D.jsx'));
 const StrikerGame3D = lazy(() => import('@/elite/games/StrikerGame3D.jsx'));
+const ScanningGame3D = lazy(() => import('@/elite/games/ScanningGame3D.jsx'));
 
 // Elite games are landscape-designed. On phones held in portrait we ask
 // the user to rotate the device.
@@ -59,6 +61,7 @@ function App() {
                                 <Route path="/schedule" element={<Schedule />} />
                                 <Route path="/objectives" element={<Objectives />} />
                                 <Route path="/iq-training" element={<IQTraining />} />
+                                <Route path="/tactics-quiz" element={<TacticsQuiz />} />
                                 <Route path="/video-upload" element={<VideoUploadPage />} />
                                 <Route path="/leaderboard" element={<LeaderboardPage />} />
                             </Route>
@@ -70,6 +73,7 @@ function App() {
                         <Route path="/elite/games/movement"   element={eliteRoute(<MovementGame3D />)} />
                         <Route path="/elite/games/body-shape" element={eliteRoute(<BodyShapeGame3D />)} />
                         <Route path="/elite/games/striker"    element={eliteRoute(<StrikerGame3D />)} />
+                        <Route path="/elite/games/scanning"   element={eliteRoute(<ScanningGame3D />)} />
                     </Routes>
                 </main>
                 <Footer />

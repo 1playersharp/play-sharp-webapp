@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "@gltf-transform/core": "^4.4.1",
+    "@gltf-transform/extensions": "^4.4.1",
+    "draco3d": "^1.5.7"
+  }
+}

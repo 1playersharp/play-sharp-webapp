@@ -19,7 +19,7 @@ export default function Footer() {
                     <p className="mt-4 max-w-md font-body text-sm leading-relaxed text-white/55">
                         Cognitive football training built for clubs, schools,
                         and academies. Faster reactions. Sharper decisions.
-                        Higher football IQ.
+                        Higher PlaySharp IQ.
                     </p>
                     <p className="mt-6 ps-label text-white/40">
                         Think quicker. Move smarter.
@@ -66,7 +66,7 @@ export default function Footer() {
                                 to="/video-upload"
                                 className="text-white/65 hover:text-white"
                             >
-                                Video Upload
+                                Video Analysis
                             </Link>
                         </li>
                         <li>

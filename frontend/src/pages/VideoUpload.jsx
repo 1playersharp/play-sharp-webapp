@@ -1,5 +1,8 @@
+// TODO: not demo-ready — hidden from primary nav (AppLayout + Footer).
+// Route in App.jsx still exists so any external link keeps resolving, but
+// the page ships stub content (fake persona, hardcoded YouTube IDs). Bring
+// it back onto the ps-* system + real data before re-linking.
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 
 const VIDEO_TYPES = [
     { value: 'match',    label: 'Match',    testId: 'video-upload-type-match' },
@@ -169,7 +172,7 @@ function CareerCard() {
                 </div>
             </div>
             <div className="text-right">
-                <p className="ps-label">Football IQ</p>
+                <p className="ps-label">PlaySharp IQ</p>
                 <div className="text-3xl font-bold text-green-400">70</div>
             </div>
         </div>
@@ -341,11 +344,14 @@ export default function VideoUploadPage() {
             <DevelopmentTimeline />
 
             <div className="mt-12 text-center">
-                <Link to="/upload">
-                    <button className="ps-btn-secondary">
-                        Upload Full Analysis
-                    </button>
-                </Link>
+                <button
+                    type="button"
+                    data-testid="video-upload-run-analysis"
+                    onClick={() => setShowUpload(true)}
+                    className="ps-btn-secondary"
+                >
+                    Run New Analysis
+                </button>
             </div>
         </div>
     );

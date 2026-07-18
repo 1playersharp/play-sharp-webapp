@@ -16,7 +16,7 @@ const ROWS = [
     ["Advanced analytics dashboard", false, false, true, true, true],
     ["Personalised training insights", false, false, true, true, true],
     ["Team leaderboard", false, false, true, true, true],
-    ["Up to 40 players", false, false, true, "unlimited", "multi-team"],
+    ["Up to 40 player-models", false, false, true, "unlimited", "multi-team"],
     ["School-wide leaderboard", false, false, false, true, false],
     ["Classroom-safe mode", false, false, false, true, false],
     ["PE curriculum alignment", false, false, false, true, false],

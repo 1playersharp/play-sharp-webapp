@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import GameStageLayout from "@/components/games/GameStageLayout";
 
 /**
  * DecisionGame — Enhanced
@@ -441,7 +442,7 @@ export default function DecisionGame({ onComplete }) {
     st.panStart = performance.now();
     st.cam = { x: s.panFrom.x, y: s.panFrom.y, zoom: 1.14 };
 
-    // reset players to setup positions
+    // reset player-models to setup positions
     st.players = {};
     s.setup.forEach(p => {
       st.players[p.id] = { x: p.x, y: p.y, tx: p.x, ty: p.y, animStart: null, hasBall: p.hasBall, label: p.label, kit: p.id === "you" ? "you" : p.kit, isYou: p.id === "you" };
@@ -528,7 +529,7 @@ export default function DecisionGame({ onComplete }) {
       });
     }
 
-    /* draw players (opponents under teammates for depth) */
+    /* draw player-models (opponents under teammates for depth) */
     const order = [...Object.values(st.players)].sort((a,b) => (a.kit==="opp"?0:1) - (b.kit==="opp"?0:1));
     order.forEach(pl => {
       drawPlayerFull(ctx, pl.x*W, pl.y*H, pl.kit, pl.label, pl.hasBall, pl.isYou);
@@ -650,40 +651,48 @@ export default function DecisionGame({ onComplete }) {
         <span style={{ fontSize:10, color:"rgba(255,255,255,0.35)" }}>{results.length} / {SCENARIOS.length} done</span>
       </div>
 
-      {/* Canvas */}
-      <div style={{ position:"relative" }}>
-        <canvas ref={canvasRef} width={W} height={H} style={{ display:"block", width:"100%", height:H }} />
-
-        {/* Panning overlay */}
-        {phase === "panning" && (
-          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-            <div style={{ border:"1px solid rgba(255,255,255,0.14)", borderLeft:"3px solid #dc1e28", background:"rgba(0,0,0,0.82)", padding:"18px 32px", textAlign:"center", maxWidth:460 }}>
-              <p style={{ fontSize:9, letterSpacing:"0.25em", color:"#dc1e28", margin:"0 0 8px", textTransform:"uppercase" }}>Scenario {idx+1} · Camera sweeping</p>
-              <p style={{ fontSize:20, fontWeight:900, color:"#fff", margin:"0 0 6px", textTransform:"uppercase" }}>{sc.title}</p>
+      {/* Docked instruction panel — kept off the play area during motion.
+          Spatial arrow badges + paused-phase feedback modal stay inside
+          the canvas wrapper (badges are gameplay, feedback is paused). */}
+      {(() => {
+        let panel = null;
+        if (phase === "panning") {
+          panel = (
+            <div style={{ border:"1px solid rgba(255,255,255,0.14)", borderLeft:"3px solid #dc1e28", background:"rgba(0,0,0,0.82)", padding:"12px 16px", fontFamily:"'JetBrains Mono',monospace" }}>
+              <p style={{ fontSize:9, letterSpacing:"0.25em", color:"#dc1e28", margin:"0 0 6px", textTransform:"uppercase" }}>Scenario {idx+1} · Camera sweeping</p>
+              <p style={{ fontSize:18, fontWeight:900, color:"#fff", margin:"0 0 4px", textTransform:"uppercase" }}>{sc.title}</p>
               <p style={{ fontSize:11, color:"rgba(255,255,255,0.45)", margin:0 }}>{sc.subtitle}</p>
             </div>
-          </div>
-        )}
-
-        {/* Deciding: question banner + timer + badge buttons */}
-        {phase === "deciding" && (
-          <>
-            <div style={{
-              position:"absolute", pointerEvents:"none",
-              [sc.questionPosition==="bottom"?"bottom":"top"]: 14,
-              left:"50%", transform:"translateX(-50%)", width:"90%", maxWidth:520,
-            }}>
-              <div style={{ border:"1px solid rgba(255,255,255,0.12)", background:"rgba(0,0,0,0.82)", padding:"10px 18px", backdropFilter:"blur(6px)" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                  <span style={{ fontSize:9, letterSpacing:"0.22em", color:"#dc1e28", textTransform:"uppercase" }}>Question</span>
-                  <span style={{ fontSize:11, color:"rgba(255,255,255,0.35)", fontVariantNumeric:"tabular-nums" }}>{timer}s</span>
-                </div>
-                <p style={{ fontSize:14, fontWeight:700, color:"#fff", margin:0, textTransform:"uppercase", letterSpacing:"0.02em" }}>{sc.question}</p>
+          );
+        } else if (phase === "deciding") {
+          panel = (
+            <div style={{ border:"1px solid rgba(255,255,255,0.12)", borderLeft:"3px solid #dc1e28", background:"rgba(0,0,0,0.82)", padding:"10px 16px", fontFamily:"'JetBrains Mono',monospace" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                <span style={{ fontSize:9, letterSpacing:"0.22em", color:"#dc1e28", textTransform:"uppercase" }}>Question</span>
+                <span style={{ fontSize:11, color:"rgba(255,255,255,0.35)", fontVariantNumeric:"tabular-nums" }}>{timer}s</span>
               </div>
+              <p style={{ fontSize:13, fontWeight:700, color:"#fff", margin:0, textTransform:"uppercase", letterSpacing:"0.02em" }}>{sc.question}</p>
             </div>
+          );
+        }
 
-            {/* Positioned badge buttons over arrow endpoints */}
-            {sc.options.map(opt => {
+        const canvasWrapper = (
+          <div style={{ position:"relative", width:"100%" }}>
+            <canvas
+              ref={canvasRef}
+              width={W}
+              height={H}
+              style={{
+                display:"block",
+                width:"100%",
+                height:"auto",
+                aspectRatio: `${W} / ${H}`,
+                maxWidth: W,
+                margin: "0 auto",
+              }}
+            />
+
+            {phase === "deciding" && sc.options.map(opt => {
               const col = OPT_COLORS[opt.key];
               return (
                 <button key={opt.key} onClick={() => handlePick(opt)} style={{
@@ -704,44 +713,54 @@ export default function DecisionGame({ onComplete }) {
                 </button>
               );
             })}
-          </>
-        )}
 
-        {/* Feedback */}
-        {phase === "feedback" && feedback && (
-          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.84)", backdropFilter:"blur(8px)" }}>
-            <div style={{
-              maxWidth:460, width:"90%",
-              border:"1px solid rgba(255,255,255,0.08)", background:"#080e0a", padding:"28px 32px",
-              borderLeft:`3px solid ${feedback.entry.matchesRecommended ? "#2ead3c" : "#dc1e28"}`,
-            }}>
-              <p style={{ fontSize:9, letterSpacing:"0.25em", textTransform:"uppercase", margin:"0 0 10px",
-                color: feedback.entry.matchesRecommended ? "#2ead3c" : "#dc1e28" }}>
-                {feedback.entry.matchesRecommended ? "Coach's call ✓" : "Coach's note"}
-              </p>
-              <p style={{ fontSize:10, color:"rgba(255,255,255,0.35)", margin:"0 0 8px", letterSpacing:"0.1em", textTransform:"uppercase" }}>
-                Your call · {feedback.opt.key} — {feedback.opt.label}
-              </p>
-              <p style={{ fontSize:13, color:"rgba(255,255,255,0.85)", margin:"0 0 16px", lineHeight:1.65 }}>
-                {feedback.opt.reason}
-              </p>
-              {!feedback.entry.matchesRecommended && feedback.recommended && (
-                <div style={{ borderTop:"1px solid rgba(255,255,255,0.07)", paddingTop:14 }}>
-                  <p style={{ fontSize:9, color:"rgba(255,255,255,0.35)", letterSpacing:"0.18em", textTransform:"uppercase", margin:"0 0 6px" }}>
-                    Preferred · {feedback.recommended.key} — {feedback.recommended.label}
+            {phase === "feedback" && feedback && (
+              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.84)", backdropFilter:"blur(8px)" }}>
+                <div style={{
+                  maxWidth:460, width:"90%",
+                  border:"1px solid rgba(255,255,255,0.08)", background:"#080e0a", padding:"28px 32px",
+                  borderLeft:`3px solid ${feedback.entry.matchesRecommended ? "#2ead3c" : "#dc1e28"}`,
+                }}>
+                  <p style={{ fontSize:9, letterSpacing:"0.25em", textTransform:"uppercase", margin:"0 0 10px",
+                    color: feedback.entry.matchesRecommended ? "#2ead3c" : "#dc1e28" }}>
+                    {feedback.entry.matchesRecommended ? "Coach's call ✓" : "Coach's note"}
                   </p>
-                  <p style={{ fontSize:12, color:"rgba(255,255,255,0.55)", margin:0, lineHeight:1.6 }}>
-                    {feedback.recommended.reason}
+                  <p style={{ fontSize:10, color:"rgba(255,255,255,0.35)", margin:"0 0 8px", letterSpacing:"0.1em", textTransform:"uppercase" }}>
+                    Your call · {feedback.opt.key} — {feedback.opt.label}
+                  </p>
+                  <p style={{ fontSize:13, color:"rgba(255,255,255,0.85)", margin:"0 0 16px", lineHeight:1.65 }}>
+                    {feedback.opt.reason}
+                  </p>
+                  {!feedback.entry.matchesRecommended && feedback.recommended && (
+                    <div style={{ borderTop:"1px solid rgba(255,255,255,0.07)", paddingTop:14 }}>
+                      <p style={{ fontSize:9, color:"rgba(255,255,255,0.35)", letterSpacing:"0.18em", textTransform:"uppercase", margin:"0 0 6px" }}>
+                        Preferred · {feedback.recommended.key} — {feedback.recommended.label}
+                      </p>
+                      <p style={{ fontSize:12, color:"rgba(255,255,255,0.55)", margin:0, lineHeight:1.6 }}>
+                        {feedback.recommended.reason}
+                      </p>
+                    </div>
+                  )}
+                  <p style={{ fontSize:10, color:"rgba(255,255,255,0.2)", marginTop:16 }}>
+                    {idx+1 < SCENARIOS.length ? "Next scenario loading…" : "Calculating score…"}
                   </p>
                 </div>
-              )}
-              <p style={{ fontSize:10, color:"rgba(255,255,255,0.2)", marginTop:16 }}>
-                {idx+1 < SCENARIOS.length ? "Next scenario loading…" : "Calculating score…"}
-              </p>
-            </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+
+        return (
+          <div style={{ padding:"10px 12px" }}>
+            <GameStageLayout
+              canvas={canvasWrapper}
+              panel={panel}
+              panelSide={sc.questionPosition === "bottom" ? "below" : "above"}
+              panelWidth={240}
+            />
+          </div>
+        );
+      })()}
 
       {/* Footer */}
       <div style={{ borderTop:"1px solid rgba(255,255,255,0.05)", padding:"8px 18px", fontSize:10, color:"rgba(255,255,255,0.3)", letterSpacing:"0.18em", textTransform:"uppercase" }}>

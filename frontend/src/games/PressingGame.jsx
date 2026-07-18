@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import GameStageLayout from "@/components/games/GameStageLayout";
 
 /**
  * RadarPressGame — Under Pressure Decision Drill
  *
  * A rotating radar sweep (submarine sonar style) reveals opponents pressing
- * the player. Between sweeps, players fade — you only know what your last
+ * the player. Between sweeps, player-models fade — you only know what your last
  * scan showed. You must decide the best action based on your scan.
  *
  * Phases per scenario:
- *   scanning  → radar sweeps 1–2 times, revealing players as it passes
+ *   scanning  → radar sweeps 1–2 times, revealing player-models as it passes
  *   deciding  → radar dims, pitch visible, pick an option badge
  *   feedback  → coach note, then next scenario
  *
@@ -421,7 +422,7 @@ export default function RadarPressGame({ onComplete }) {
       ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(sx, sy);
       ctx.strokeStyle = lineGrad; ctx.lineWidth = 2; ctx.stroke();
 
-      // reveal players as sweep passes them
+      // reveal player-models as sweep passes them
       sc.players.forEach(p => {
         const rel = stateRef.current.revealed[p.id];
         // normalise player angle and sweep angle to [0, 2π]
@@ -434,7 +435,7 @@ export default function RadarPressGame({ onComplete }) {
       });
     }
 
-    /* ── draw players (radar blips + jerseys) ── */
+    /* ── draw player-models (radar blips + jerseys) ── */
     sc.players.forEach(p => {
       const rel  = st.revealed[p.id];
       const pd   = st.playerDist?.[p.id];
@@ -474,7 +475,7 @@ export default function RadarPressGame({ onComplete }) {
       const kitKey = p.id === "you" ? "you" : p.kit;
       const blipColor = kitKey === "opp" ? "#ff3333" : kitKey === "you" ? KIT.you.fill : "#33aaff";
 
-      // pressing players get a larger, pulsing blip ring
+      // pressing player-models get a larger, pulsing blip ring
       if (p.pressing) {
         const pulse = 0.5 + 0.5 * Math.sin(now / 250);
         ctx.beginPath(); ctx.arc(pos.x, pos.y, 18 + pulse * 6, 0, Math.PI * 2);
@@ -631,34 +632,58 @@ export default function RadarPressGame({ onComplete }) {
         <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)" }}>{results.length} / {SCENARIOS.length} done</span>
       </div>
 
-      {/* Canvas area */}
-      <div style={{ position:"relative" }}>
-        <canvas ref={canvasRef} width={W} height={H} style={{ display:"block", width:"100%", height:H }} />
-
-        {/* Scanning banner */}
-        {phase === "scanning" && (
-          <div style={{ position:"absolute", bottom:14, left:"50%", transform:"translateX(-50%)", pointerEvents:"none" }}>
-            <div style={{ border:`1px solid ${RADAR_COLOR}33`, borderLeft:`3px solid ${RADAR_COLOR}`, background:"rgba(0,0,0,0.85)", padding:"12px 24px", textAlign:"center" }}>
-              <p style={{ fontSize:9, letterSpacing:"0.25em", color: RADAR_COLOR, margin:"0 0 6px", textTransform:"uppercase" }}>
-                Scenario {idx+1} · {sc.sweeps === 1 ? "One sweep only" : `${sc.sweeps} sweeps`}
-              </p>
-              <p style={{ fontSize:16, fontWeight:900, color:"#fff", margin:"0 0 4px", textTransform:"uppercase" }}>{sc.title}</p>
-              <p style={{ fontSize:10, color:"rgba(255,255,255,0.4)", margin:0 }}>{sc.subtitle}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Deciding: question + badges */}
-        {phase === "deciding" && (
-          <>
-            <div style={{ position:"absolute", top:14, left:"50%", transform:"translateX(-50%)", width:"88%", maxWidth:500, pointerEvents:"none" }}>
-              <div style={{ border:"1px solid rgba(255,255,255,0.1)", background:"rgba(0,0,0,0.88)", padding:"10px 18px", backdropFilter:"blur(4px)" }}>
+      {/* Instruction panel — docked (never over the play area during motion).
+          Feedback stays as a centred overlay inside the canvas wrapper below
+          because that phase is paused, which is exempt from the rule. */}
+      {(() => {
+        const panel = (phase === "scanning" || phase === "deciding") ? (
+          <div style={{
+            border: `1px solid ${phase === "scanning" ? `${RADAR_COLOR}33` : "rgba(255,255,255,0.1)"}`,
+            borderLeft: `3px solid ${phase === "scanning" ? RADAR_COLOR : "#dc1e28"}`,
+            background: "rgba(0,0,0,0.85)",
+            padding: "10px 16px",
+            fontFamily: "'JetBrains Mono',monospace",
+          }}>
+            {phase === "scanning" ? (
+              <>
+                <p style={{ fontSize:9, letterSpacing:"0.25em", color: RADAR_COLOR, margin:"0 0 6px", textTransform:"uppercase" }}>
+                  Scenario {idx+1} · {sc.sweeps === 1 ? "One sweep only" : `${sc.sweeps} sweeps`}
+                </p>
+                <p style={{ fontSize:15, fontWeight:900, color:"#fff", margin:"0 0 4px", textTransform:"uppercase" }}>{sc.title}</p>
+                <p style={{ fontSize:10, color:"rgba(255,255,255,0.4)", margin:0 }}>{sc.subtitle}</p>
+              </>
+            ) : (
+              <>
                 <p style={{ fontSize:9, letterSpacing:"0.22em", color:"#dc1e28", margin:"0 0 4px", textTransform:"uppercase" }}>Decide</p>
-                <p style={{ fontSize:14, fontWeight:700, color:"#fff", margin:0, textTransform:"uppercase", letterSpacing:"0.02em" }}>{sc.question}</p>
-              </div>
-            </div>
+                <p style={{ fontSize:13, fontWeight:700, color:"#fff", margin:0, textTransform:"uppercase", letterSpacing:"0.02em" }}>{sc.question}</p>
+              </>
+            )}
+          </div>
+        ) : null;
 
-            {sc.options.map(opt => {
+        // Canvas wrapper — position:relative anchors the spatial option
+        // badges (positioned via % from badgePos()) and the paused-phase
+        // feedback modal (inset:0). Nothing that lives here counts as
+        // "instructional overlay" during motion: badges are gameplay,
+        // feedback is paused. Canvas itself is width:100% + aspect-ratio so
+        // it never forces the container taller than the viewport.
+        const canvasWrapper = (
+          <div style={{ position:"relative", width:"100%" }}>
+            <canvas
+              ref={canvasRef}
+              width={W}
+              height={H}
+              style={{
+                display:"block",
+                width:"100%",
+                height:"auto",
+                aspectRatio: `${W} / ${H}`,
+                maxWidth: W,
+                margin: "0 auto",
+              }}
+            />
+
+            {phase === "deciding" && sc.options.map(opt => {
               const pos = badgePos(opt.badgeAngle, opt.badgeDist);
               const col = OPT_COLORS[opt.key];
               return (
@@ -676,44 +701,49 @@ export default function RadarPressGame({ onComplete }) {
                 </button>
               );
             })}
-          </>
-        )}
 
-        {/* Feedback */}
-        {phase === "feedback" && feedback && (
-          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.88)", backdropFilter:"blur(8px)" }}>
-            <div style={{
-              maxWidth:440, width:"90%", padding:"28px 32px",
-              border:"1px solid rgba(255,255,255,0.07)", background:"#060e07",
-              borderLeft:`3px solid ${feedback.entry.matchesRecommended ? "#2ead3c" : "#dc1e28"}`,
-            }}>
-              <p style={{ fontSize:9, letterSpacing:"0.25em", textTransform:"uppercase", margin:"0 0 10px",
-                color: feedback.entry.matchesRecommended ? "#2ead3c" : "#dc1e28" }}>
-                {feedback.entry.matchesRecommended ? "Good read ✓" : "Coach's note"}
-              </p>
-              <p style={{ fontSize:10, color:"rgba(255,255,255,0.3)", margin:"0 0 8px", letterSpacing:"0.1em", textTransform:"uppercase" }}>
-                Your call · {feedback.opt.key} — {feedback.opt.label}
-              </p>
-              <p style={{ fontSize:13, color:"rgba(255,255,255,0.85)", lineHeight:1.65, margin:"0 0 0" }}>
-                {feedback.opt.reason}
-              </p>
-              {!feedback.entry.matchesRecommended && feedback.recommended && (
-                <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:14, marginTop:14 }}>
-                  <p style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:"0.18em", textTransform:"uppercase", margin:"0 0 6px" }}>
-                    Best read · {feedback.recommended.key} — {feedback.recommended.label}
+            {phase === "feedback" && feedback && (
+              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.88)", backdropFilter:"blur(8px)" }}>
+                <div style={{
+                  maxWidth:440, width:"90%", padding:"28px 32px",
+                  border:"1px solid rgba(255,255,255,0.07)", background:"#060e07",
+                  borderLeft:`3px solid ${feedback.entry.matchesRecommended ? "#2ead3c" : "#dc1e28"}`,
+                }}>
+                  <p style={{ fontSize:9, letterSpacing:"0.25em", textTransform:"uppercase", margin:"0 0 10px",
+                    color: feedback.entry.matchesRecommended ? "#2ead3c" : "#dc1e28" }}>
+                    {feedback.entry.matchesRecommended ? "Good read ✓" : "Coach's note"}
                   </p>
-                  <p style={{ fontSize:12, color:"rgba(255,255,255,0.5)", margin:0, lineHeight:1.6 }}>
-                    {feedback.recommended.reason}
+                  <p style={{ fontSize:10, color:"rgba(255,255,255,0.3)", margin:"0 0 8px", letterSpacing:"0.1em", textTransform:"uppercase" }}>
+                    Your call · {feedback.opt.key} — {feedback.opt.label}
+                  </p>
+                  <p style={{ fontSize:13, color:"rgba(255,255,255,0.85)", lineHeight:1.65, margin:"0 0 0" }}>
+                    {feedback.opt.reason}
+                  </p>
+                  {!feedback.entry.matchesRecommended && feedback.recommended && (
+                    <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:14, marginTop:14 }}>
+                      <p style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:"0.18em", textTransform:"uppercase", margin:"0 0 6px" }}>
+                        Best read · {feedback.recommended.key} — {feedback.recommended.label}
+                      </p>
+                      <p style={{ fontSize:12, color:"rgba(255,255,255,0.5)", margin:0, lineHeight:1.6 }}>
+                        {feedback.recommended.reason}
+                      </p>
+                    </div>
+                  )}
+                  <p style={{ fontSize:10, color:"rgba(255,255,255,0.18)", marginTop:16 }}>
+                    {idx+1 < SCENARIOS.length ? "Next scenario…" : "Calculating score…"}
                   </p>
                 </div>
-              )}
-              <p style={{ fontSize:10, color:"rgba(255,255,255,0.18)", marginTop:16 }}>
-                {idx+1 < SCENARIOS.length ? "Next scenario…" : "Calculating score…"}
-              </p>
-            </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+
+        return (
+          <div style={{ padding: "10px 12px" }}>
+            <GameStageLayout canvas={canvasWrapper} panel={panel} panelSide="above" panelWidth={240} />
+          </div>
+        );
+      })()}
 
       {/* Legend */}
       <div style={{ borderTop:`1px solid ${RADAR_COLOR}15`, padding:"8px 18px", display:"flex", gap:20, alignItems:"center" }}>

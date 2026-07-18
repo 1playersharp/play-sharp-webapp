@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
  * dark, mono-font styling of EliteScoreCard / feedback cards, with a
  * per-game accent colour on the top border and Start button.
  *
- * Auto-dismisses at ~8 s so repeat players aren't blocked; users can hit
+ * Auto-dismisses at ~8 s so repeat player-models aren't blocked; users can hit
  * Enter/Space or the Start button to skip immediately.
  */
 const DEFAULT_AUTO_DISMISS_MS = 8000;
