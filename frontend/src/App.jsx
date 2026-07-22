@@ -27,6 +27,8 @@ const MovementGame3D = lazy(() => import('@/elite/games/MovementGame3D.jsx'));
 const BodyShapeGame3D = lazy(() => import('@/elite/games/BodyShapeGame3D.jsx'));
 const StrikerGame3D = lazy(() => import('@/elite/games/StrikerGame3D.jsx'));
 const ScanningGame3D = lazy(() => import('@/elite/games/ScanningGame3D.jsx'));
+const DuelGame3D = lazy(() => import('@/elite/games/DuelGame3D.jsx'));
+const RunsGame3D = lazy(() => import('@/elite/games/RunsGame3D.jsx'));
 
 // Elite games are landscape-designed. On phones held in portrait we ask
 // the user to rotate the device.
@@ -74,6 +76,8 @@ function App() {
                         <Route path="/elite/games/body-shape" element={eliteRoute(<BodyShapeGame3D />)} />
                         <Route path="/elite/games/striker"    element={eliteRoute(<StrikerGame3D />)} />
                         <Route path="/elite/games/scanning"   element={eliteRoute(<ScanningGame3D />)} />
+                        <Route path="/elite/games/defending-duels" element={eliteRoute(<DuelGame3D />)} />
+                        <Route path="/elite/games/winger-runs"      element={eliteRoute(<RunsGame3D />)} />
                     </Routes>
                 </main>
                 <Footer />

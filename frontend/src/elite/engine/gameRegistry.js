@@ -1,6 +1,6 @@
 import {
     Zap, Brain, Eye, Shield, ClipboardList,
-    Navigation2, Users, Target, Compass, Send, Footprints,
+    Navigation2, Users, Target, Compass, Send, Footprints, Swords, UserCheck, Route,
 } from 'lucide-react';
 
 import ReactionGame from '@/games/ReactionGame';
@@ -9,6 +9,7 @@ import ScanningGame from '@/games/ScanningGame';
 import PressingGame from '@/games/PressingGame';
 import TacticalQuizGame from '@/games/TacticalQuizGame';
 import PassMoveGame from '@/games/PassMoveGame';
+import MarkingGame from '@/games/MarkingGame';
 
 // Position rows shown in the IQ Training accordion.
 export const POSITIONS = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'];
@@ -69,6 +70,21 @@ export const GAME_REGISTRY = {
         foundation: null,
         elite: { path: '/elite/games/crossing', description: 'Delivery type, target & timing from wide' },
     },
+    marking: {
+        label: 'Marking', Icon: UserCheck, colour: 'text-ps-blue',
+        foundation: { Cmp: MarkingGame },
+        elite: null,
+    },
+    duels: {
+        label: 'Defending Duels', Icon: Swords, colour: 'text-ps-red',
+        foundation: null,
+        elite: { path: '/elite/games/defending-duels', description: 'Engage or jockey — 1v1s, cover, and 2v1 overloads' },
+    },
+    runs: {
+        label: 'Runs — Lose Your Marker', Icon: Route, colour: 'text-ps-pink',
+        foundation: null,
+        elite: { path: '/elite/games/winger-runs', description: 'Freeze-frame runs: out-to-in, in-to-out, double move, blind side, underlap' },
+    },
 };
 
 /** Resolve one skill id to whatever's renderable for this player's tier, falling back to the other tier. */
@@ -92,16 +108,18 @@ export function resolveGame(skillId, preferredTier) {
  */
 export const DEMO_PLAYABLE = {
     GK: [{ id: 'reaction' },                     { id: 'scanning' }],
-    CB: [{ id: 'pressing', tier: 'elite' },      { id: 'decision' }],
-    FB: [{ id: 'pressing', tier: 'elite' },      { id: 'decision', tier: 'elite' }],
+    // Defender/CB — includes the two new defending games (marking + duels).
+    CB: [{ id: 'pressing', tier: 'elite' },      { id: 'decision' },        { id: 'marking' },            { id: 'duels', tier: 'elite' }],
+    // Full Back — same defending pair, keeps their existing pressing/decision.
+    FB: [{ id: 'pressing', tier: 'elite' },      { id: 'decision', tier: 'elite' }, { id: 'marking' },     { id: 'duels', tier: 'elite' }],
     // NOTE: DM/CM/AM intentionally carry THREE playable games instead of the
     // usual two — 'scanning' is the highest-value midfield objective and the
     // rigged-player scanning game was built specifically for these positions.
     // Breaks the "exactly 2 per position" rule; kept explicit for review.
-    DM: [{ id: 'movement', tier: 'elite' },      { id: 'body_shape' },      { id: 'scanning', tier: 'elite' }],
-    CM: [{ id: 'movement', tier: 'elite' },      { id: 'body_shape' },      { id: 'scanning', tier: 'elite' }],
-    AM: [{ id: 'movement', tier: 'elite' },      { id: 'positioning' },     { id: 'scanning', tier: 'elite' }],
-    W:  [{ id: 'striker' },                      { id: 'crossing' }],
+    DM: [{ id: 'movement', tier: 'elite' },      { id: 'body_shape' },      { id: 'scanning', tier: 'elite' }, { id: 'decision', tier: 'elite' }],
+    CM: [{ id: 'movement', tier: 'elite' },      { id: 'body_shape' },      { id: 'scanning', tier: 'elite' }, { id: 'decision', tier: 'elite' }],
+    AM: [{ id: 'movement', tier: 'elite' },      { id: 'positioning' },     { id: 'scanning', tier: 'elite' }, { id: 'decision', tier: 'elite' }],
+    W:  [{ id: 'striker' },                      { id: 'crossing' },        { id: 'decision', tier: 'elite' }, { id: 'runs', tier: 'elite' }],
     ST: [{ id: 'body_shape' },                   { id: 'striker' }],
 };
 

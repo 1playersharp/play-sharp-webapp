@@ -60,6 +60,7 @@ export default function IQTraining() {
     const pressingResult     = useFoundationStore((s) => s.pressingResult);
     const tacticalQuizResult = useFoundationStore((s) => s.tacticalQuizResult);
     const passMoveResult     = useFoundationStore((s) => s.passMoveResult);
+    const markingResult      = useFoundationStore((s) => s.markingResult);
 
     // Elite results, indexed by skillId. New games (positioning / crossing)
     // will be added to the elite store by the companion build; the selectors
@@ -71,6 +72,8 @@ export default function IQTraining() {
     const eliteScanningResult    = useEliteStore((s) => s.eliteScanningResult);
     const elitePositioningResult = useEliteStore((s) => s.elitePositioningResult);
     const eliteCrossingResult    = useEliteStore((s) => s.eliteCrossingResult);
+    const eliteDuelsResult       = useEliteStore((s) => s.eliteDuelsResult);
+    const eliteRunsResult        = useEliteStore((s) => s.eliteRunsResult);
 
     const RESULTS_BY_SKILL = {
         foundation: {
@@ -80,6 +83,7 @@ export default function IQTraining() {
             pressing:      pressingResult,
             tactical_quiz: tacticalQuizResult,
             pass_move:     passMoveResult,
+            marking:       markingResult,
         },
         elite: {
             decision:    eliteDecisionResult,
@@ -89,6 +93,8 @@ export default function IQTraining() {
             scanning:    eliteScanningResult,
             positioning: elitePositioningResult,
             crossing:    eliteCrossingResult,
+            duels:       eliteDuelsResult,
+            runs:        eliteRunsResult,
         },
     };
 
@@ -210,6 +216,19 @@ export default function IQTraining() {
                                         const result = resultFor(resolved);
                                         const testId = `iq-training-card-${pos}-${skillId}`;
 
+                                        // Every training game currently ships as Level 1. The chip
+                                        // stays in place so future levels can drop in without a
+                                        // layout change; the tooltip signals what's coming.
+                                        const levelChip = (
+                                            <span
+                                                data-testid={`${testId}-level`}
+                                                title="Level 1 — additional levels coming soon"
+                                                className="inline-flex w-fit items-center gap-1 rounded-sm border border-ps-gold/40 bg-ps-gold/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-ps-gold"
+                                            >
+                                                Level 1
+                                            </span>
+                                        );
+
                                         if (tier === 'elite') {
                                             return (
                                                 <Link
@@ -226,7 +245,8 @@ export default function IQTraining() {
                                                             <span className="ml-2 font-bold text-ps-turf">✓</span>
                                                         )}
                                                     </h3>
-                                                    <p className="mt-1 text-xs text-white/60">{description}</p>
+                                                    <div className="mt-2">{levelChip}</div>
+                                                    <p className="mt-2 text-xs text-white/60">{description}</p>
                                                 </Link>
                                             );
                                         }
@@ -246,6 +266,7 @@ export default function IQTraining() {
                                                         <span className="ml-2 font-bold text-ps-turf">✓</span>
                                                     )}
                                                 </h3>
+                                                <div className="mt-2">{levelChip}</div>
                                             </button>
                                         );
                                     })}

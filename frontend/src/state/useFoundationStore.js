@@ -10,6 +10,7 @@ const useFoundationStore = create(
       pressingResult: null,
       tacticalQuizResult: null,
       passMoveResult: null,
+      markingResult: null,
       setFoundationResult: (gameType, payload) => {
         const value = { score: payload.score, reactionTime: payload.reactionTime ?? null };
         switch (gameType) {
@@ -19,6 +20,7 @@ const useFoundationStore = create(
           case 'pressing':      set({ pressingResult: value }); break;
           case 'tactical_quiz': set({ tacticalQuizResult: value }); break;
           case 'pass_move':     set({ passMoveResult: value }); break;
+          case 'marking':       set({ markingResult: value }); break;
           default: break;
         }
       },
@@ -32,6 +34,7 @@ const useFoundationStore = create(
         pressingResult: state.pressingResult,
         tacticalQuizResult: state.tacticalQuizResult,
         passMoveResult: state.passMoveResult,
+        markingResult: state.markingResult,
       }),
     }
   )

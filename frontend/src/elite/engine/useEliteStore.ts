@@ -10,6 +10,8 @@ type EliteStore = {
   eliteBodyShapeResult: EliteResult;
   eliteStrikerResult: EliteResult;
   eliteScanningResult: EliteResult;
+  eliteDuelsResult: EliteResult;
+  eliteRunsResult: EliteResult;
   setEliteResult: (gameType: string, payload: { score: number; reactionTime?: number | null }) => void;
 };
 
@@ -22,6 +24,8 @@ const useEliteStore = create<EliteStore>(
       eliteBodyShapeResult: null,
       eliteStrikerResult: null,
       eliteScanningResult: null,
+      eliteDuelsResult: null,
+      eliteRunsResult: null,
       setEliteResult: (gameType, payload) => {
         const value = { score: payload.score, reactionTime: payload.reactionTime ?? null };
         switch (gameType) {
@@ -43,6 +47,12 @@ const useEliteStore = create<EliteStore>(
           case 'elite_scanning':
             set({ eliteScanningResult: value });
             break;
+          case 'elite_duels':
+            set({ eliteDuelsResult: value });
+            break;
+          case 'elite_runs':
+            set({ eliteRunsResult: value });
+            break;
           default:
             // ignore unknown
             break;
@@ -58,6 +68,8 @@ const useEliteStore = create<EliteStore>(
         eliteBodyShapeResult: state.eliteBodyShapeResult,
         eliteStrikerResult: state.eliteStrikerResult,
         eliteScanningResult: state.eliteScanningResult,
+        eliteDuelsResult: state.eliteDuelsResult,
+        eliteRunsResult: state.eliteRunsResult,
       }),
     }
   )

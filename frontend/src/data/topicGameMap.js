@@ -19,6 +19,8 @@ const ROUTED_ELITE_SKILLS = {
     body_shape: '/elite/games/body-shape',
     striker:    '/elite/games/striker',
     scanning:   '/elite/games/scanning',
+    duels:      '/elite/games/defending-duels',
+    runs:       '/elite/games/winger-runs',
 };
 
 // Foundation games all run inside the /iq-training accordion (no per-game
@@ -28,12 +30,14 @@ const FOUNDATION_HUB_PATH = '/iq-training';
 // One or more elite skills (highest priority first) that best target the
 // topic. Every topic falls onto at least one routed elite skill.
 const TOPIC_TO_ELITE_SKILL = {
-    // Defender
-    [TOPICS.ONE_V_ONE_DEF]:    ['pressing'],
+    // Defender — "1v1" and "marking" quiz topics point at the two new
+    // dedicated defending games; the rest fall back to the closest routed
+    // skills.
+    [TOPICS.ONE_V_ONE_DEF]:    ['duels', 'pressing'],
     [TOPICS.READING_PLAY]:     ['scanning', 'decision'],
-    [TOPICS.MARKING]:          ['body_shape', 'pressing'],
+    [TOPICS.MARKING]:          ['marking', 'body_shape', 'pressing'],
     [TOPICS.OVERLAPPING_RUNS]: ['movement', 'pressing'],
-    [TOPICS.DEFENDING_CROSS]:  ['pressing'],
+    [TOPICS.DEFENDING_CROSS]:  ['duels', 'pressing'],
 
     // Midfielder
     [TOPICS.PROGRESSIVE_PASSING]:     ['decision'],
@@ -44,48 +48,52 @@ const TOPIC_TO_ELITE_SKILL = {
     // Striker / attacker
     [TOPICS.DRIBBLING_1V1]:      ['striker'],
     [TOPICS.CROSSING]:           ['movement', 'striker'], // no crossing route mounted
-    [TOPICS.ATTACKING_MOVEMENT]: ['movement', 'striker'],
+    [TOPICS.ATTACKING_MOVEMENT]: ['runs', 'movement', 'striker'],
     [TOPICS.FINISHING]:          ['striker'],
     [TOPICS.ONE_V_ONE_ATT]:      ['striker'],
 };
 
-/** Resolve a topic slug to a concrete recommended game card. */
+/** Resolve a topic slug to a concrete recommended game card.
+ *
+ * Priority order matters: the first skill in TOPIC_TO_ELITE_SKILL is the
+ * canonical target for the topic (e.g. `duels` for 1v1, `marking` for
+ * marking). We take the first skill that's usable in EITHER tier and only
+ * fall through to the next skill if this one has no foundation game AND no
+ * routed elite variant. Tier is then chosen by the player's preference,
+ * with fallback to whichever tier the skill actually ships in.
+ */
 export function gameForTopic(topic, { preferredTier = 'foundation' } = {}) {
-    const eliteSkills = TOPIC_TO_ELITE_SKILL[topic] || [];
+    const skills = TOPIC_TO_ELITE_SKILL[topic] || [];
 
-    // Try foundation first when the player prefers it and the skill has a
-    // foundation variant registered. This still links to /iq-training since
-    // foundation games have no direct route.
-    if (preferredTier === 'foundation') {
-        for (const skillId of eliteSkills) {
-            const entry = GAME_REGISTRY[skillId];
-            if (entry?.foundation) {
-                return {
-                    skillId,
-                    tier: 'foundation',
-                    label: entry.label,
-                    Icon: entry.Icon,
-                    colour: entry.colour,
-                    path: FOUNDATION_HUB_PATH,
-                };
-            }
-        }
-    }
-
-    // Otherwise fall through to the first elite skill with a routed page.
-    for (const skillId of eliteSkills) {
-        const path = ROUTED_ELITE_SKILLS[skillId];
+    for (const skillId of skills) {
         const entry = GAME_REGISTRY[skillId];
-        if (path && entry) {
+        if (!entry) continue;
+        const hasFoundation = !!entry.foundation;
+        const elitePath = ROUTED_ELITE_SKILLS[skillId];
+        const hasElite = !!elitePath;
+        if (!hasFoundation && !hasElite) continue;
+
+        const useFoundation =
+            (preferredTier === 'foundation' && hasFoundation) ||
+            (!hasElite);
+        if (useFoundation) {
             return {
                 skillId,
-                tier: 'elite',
+                tier: 'foundation',
                 label: entry.label,
                 Icon: entry.Icon,
                 colour: entry.colour,
-                path,
+                path: FOUNDATION_HUB_PATH,
             };
         }
+        return {
+            skillId,
+            tier: 'elite',
+            label: entry.label,
+            Icon: entry.Icon,
+            colour: entry.colour,
+            path: elitePath,
+        };
     }
 
     return null;
